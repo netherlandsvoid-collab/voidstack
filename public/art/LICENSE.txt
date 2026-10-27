@@ -1,0 +1,4 @@
+MIT License
+Copyright (c) 2026 Nexirel contributors
+Permission is hereby granted, free of charge, to any person obtaining a copy of these original sample SVG artworks, to deal in the artworks without restriction, including the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies, and to permit persons to whom the artworks are furnished to do so, subject to inclusion of this notice.
+THE ARTWORKS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.

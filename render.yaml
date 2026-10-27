@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nexirel
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --include=dev && DATA_DIR=/tmp/nexirel-build npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    disk:
+      name: nexirel-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.13.0
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data/nexirel
+      - key: ENABLE_DEV_CHECKOUT
+        value: false
