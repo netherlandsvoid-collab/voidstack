@@ -1,4 +1,5 @@
 import { createCheckout } from "@/lib/payments";
+import { beginUpload, completeUpload, signedMediaUrl } from "@/lib/media";
 import { NextResponse } from "next/server";
 import {
   all,
@@ -142,6 +143,8 @@ async function handleGET(
         return okError("Download link expired. Request a new link.", 403);
       const p = await get("product", order.productId),
         f = p?.fileId ? await get("media", p.fileId) : null;
+      if (f?.storagePath)
+        return Response.redirect(await signedMediaUrl(f, true), 307);
       if (f)
         return new Response(Buffer.from(f.base64, "base64"), {
           headers: {
@@ -390,6 +393,8 @@ async function handlePOST(
         await put("notification", { ...notification, read: true });
       return ok({ ok: true });
     }
+    if (a === "upload-init") return ok(await beginUpload(u, b));
+    if (a === "upload-complete") return ok(await completeUpload(u, b));
     if (a === "upload") {
       const allowed = [
         "image/jpeg",
