@@ -163,3 +163,9 @@ Do not enable simulated checkout on a public site.
 Distributed rate limiting, moderation operations, malware scanning, backups,
 account deletion/export, real payment-provider readiness and load testing remain
 launch work. The in-process throttle is a basic development safeguard.
+
+### Open Studio visual system
+
+The lavender/plum/orange theme lives in `src/app/studio.css`, layered over the existing structural styles. The feed spotlights the first result, shows a linked download only when a published listing exists, and offers a collapsible Filter feed control. The download shelf uses published product data. Navigation changes clear cross-page category filters. Mobile retains a bottom navigation bar and drawer; dark mode uses the same semantic tokens.
+
+`public/studio/*.webp` contains generated sample artwork; only sample seed images and the marketplace banner use it. User-uploaded images and records are unchanged. Manrope is self-hosted under `public/fonts`, with its SIL Open Font License alongside it. No additional deployment variables or SQL are needed. See `design-qa.md` for browser checks and remaining test gaps.
