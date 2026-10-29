@@ -53,8 +53,9 @@ export const seedPosts = [
     caption:
       "A little experiment in light, texture, and the space in between. Made with Blender & a lot of curiosity. ☁️",
     tags: ["3D art", "Exploration"],
-    image: "/art/soft-forms.svg",
+    image: "/studio/liquid-dreams.webp",
     height: 410,
+    productId: "d1",
     likes: 248,
   },
   {
@@ -64,7 +65,7 @@ export const seedPosts = [
     caption:
       "New visual identity explorations for an independent architecture studio. Finding the balance between structure and softness.",
     tags: ["Branding", "Graphic design"],
-    image: "/art/forma.svg",
+    image: "/studio/type-together.webp",
     height: 330,
     likes: 186,
   },
@@ -75,7 +76,7 @@ export const seedPosts = [
     caption:
       "A few frames from the coast. A reminder to take the long way home.",
     tags: ["Photography", "Nature"],
-    image: "/art/coast.svg",
+    image: "/studio/quiet-geometry.webp",
     height: 340,
     likes: 324,
   },
@@ -122,7 +123,7 @@ export const seedProducts = [
     price: 24,
     category: "3D assets",
     format: "BLEND · PDF",
-    image: "/art/soft-forms.svg",
+    image: "/studio/liquid-dreams.webp",
     status: "published",
   },
   {
@@ -134,7 +135,7 @@ export const seedProducts = [
     price: 38,
     category: "Templates",
     format: "FIG · PDF",
-    image: "/art/forma.svg",
+    image: "/studio/type-together.webp",
     status: "published",
   },
   {
@@ -146,7 +147,7 @@ export const seedProducts = [
     price: 16,
     category: "Photography",
     format: "XMP · PDF",
-    image: "/art/coast.svg",
+    image: "/studio/quiet-geometry.webp",
     status: "published",
   },
   {

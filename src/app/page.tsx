@@ -4,6 +4,7 @@ import { readApiResponse } from "@/lib/api-response";
 import { uploadDirect } from "@/lib/direct-upload";
 import AccountSettings from "@/components/AccountSettings";
 import {
+  Asterisk,
   ArrowUpRight,
   ArrowRight,
   ArrowLeft,
@@ -150,6 +151,7 @@ export default function App() {
     [messageText, setMessageText] = useState(""),
     [messageImage, setMessageImage] = useState("");
   const [sellDownload, setSellDownload] = useState(false);
+  const [feedFiltersOpen, setFeedFiltersOpen] = useState(false);
   const productsById = new Map<string, Item>(
     (data.products as Item[]).map((p) => [p.id, p]),
   );
@@ -280,6 +282,7 @@ export default function App() {
   }
   function go(id: string) {
     setPage(id);
+    if (id !== page) setCategory("For you");
     setQuery("");
     setSearchOpen(false);
     setMobileNav(false);
@@ -504,14 +507,14 @@ export default function App() {
       </article>
     );
   }
-  function postCard(p: Item) {
+  function postCard(p: Item, featured = false) {
     const sale = productsById.get(p.productId);
     const author = user(p.userId),
       liked = data.likes.includes(p.id),
       saved = data.saved.includes(p.id);
     return (
       <article
-        className="post-card"
+        className={`post-card ${featured ? "featured-post" : ""}`}
         key={p.id}
         style={{ order: posts.findIndex((x) => x.id === p.id) }}
       >
@@ -522,18 +525,22 @@ export default function App() {
             history.replaceState(null, "", `?post=${p.id}`);
           }}
           aria-label={`View ${p.title}`}
-          style={{ height: p.height || 350 }}
+          style={featured ? undefined : { height: p.height || 350 }}
         >
           {p.image ? (
             data.mediaTypes?.[p.image]?.startsWith("video/") ? (
               <video src={p.image} controls />
             ) : (
-              <img src={p.image} alt={p.title} loading="lazy" />
+              <img
+                src={p.image}
+                alt={p.title}
+                loading={featured ? "eager" : "lazy"}
+              />
             )
           ) : (
             <div className="text-art">{p.caption}</div>
           )}
-          <span className="art-category">{p.tags?.[0] || "Creative work"}</span>
+          {p.seed && <span className="sample-art-label">Sample work</span>}
           <span className="art-arrow">
             <ArrowUpRight size={20} />
           </span>
@@ -563,12 +570,46 @@ export default function App() {
             {p.title}
           </button>
           <p className="post-caption">{p.caption}</p>
+          {featured && (
+            <div className="featured-discipline">
+              {p.tags?.slice(0, 2).join(" / ")}
+            </div>
+          )}
           {sale?.status === "published" && (
+            <div className="post-download">
+              {featured && (
+                <span className="download-label">Featured in this post</span>
+              )}
+              <button
+                className="download-preview"
+                onClick={() => open("product", sale)}
+                aria-label={`View download ${sale.title}`}
+              >
+                {sale.image && <img src={sale.image} alt="" />}
+                <span>
+                  <strong>{sale.title}</strong>
+                  <small>{sale.format || sale.category}</small>
+                </span>
+              </button>
+              <div className="download-cta">
+                <strong>
+                  ${Number(sale.price).toFixed(2)} <small>USD</small>
+                </strong>
+                <button
+                  className="button primary sale-link"
+                  onClick={() => open("product", sale)}
+                >
+                  View download <ArrowUpRight size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+          {featured && !sale && (
             <button
-              className="button secondary sale-link"
-              onClick={() => open("product", sale)}
+              className="text-button featured-open"
+              onClick={() => open("post", p)}
             >
-              <ShoppingBag size={16} /> View download · ${sale.price} USD
+              Join the conversation <ArrowUpRight size={17} />
             </button>
           )}
           <div className="post-bottom">
@@ -613,67 +654,67 @@ export default function App() {
     );
   }
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}>
+    <div className="app-shell studio-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      {mobileNav && (
+        <button
+          className="navigation-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileNav(false)}
+        />
+      )}
+      <aside
+        id="main-navigation"
+        className={`sidebar ${mobileNav ? "mobile-open" : ""}`}
+        aria-label="Main navigation"
+      >
         <a href="/" className="wordmark">
           <span className="brand-symbol">
-            n<span>✻</span>
+            n<Asterisk size={19} aria-hidden="true" />
           </span>
           nexirel<span className="brand-dot">.</span>
         </a>
-        <div className="workspace-label">YOUR CREATIVE SPACE</div>
+        <div className="workspace-label">THE CREATIVE COMMUNITY</div>
         <nav>
-          {navs.map((n) => (
-            <button
-              key={n.id}
-              className={`nav-item ${page === n.id ? "active" : ""}`}
-              onClick={() => go(n.id)}
-            >
-              <n.icon size={20} strokeWidth={page === n.id ? 2 : 1.65} />
-              <span>{n.label}</span>
-              {n.id === "messages" && unread > 0 && (
-                <b className="nav-badge">{unread}</b>
-              )}
-              {n.id === "notifications" && unseen > 0 && (
-                <span className="notification-dot" />
-              )}
-              {n.id === "marketplace" && <span className="new-pill">NEW</span>}
-            </button>
-          ))}
+          {navs
+            .filter((n) => n.id !== "notifications")
+            .map((n) => (
+              <button
+                key={n.id}
+                aria-current={page === n.id ? "page" : undefined}
+                className={`nav-item ${page === n.id ? "active" : ""}`}
+                onClick={() => go(n.id)}
+              >
+                <n.icon size={20} strokeWidth={page === n.id ? 2 : 1.65} />
+                <span>{n.label}</span>
+                {n.id === "messages" && unread > 0 && (
+                  <b className="nav-badge">{unread}</b>
+                )}
+                {n.id === "notifications" && unseen > 0 && (
+                  <span className="notification-dot" />
+                )}
+              </button>
+            ))}
         </nav>
-        <div className="sidebar-divider" />
-        <button
-          className="nav-item"
-          onClick={() => (me ? profile(me.id) : open("auth"))}
-        >
-          <Users size={20} />
-          <span>My profile</span>
-        </button>
-        <button
-          className="nav-item"
-          onClick={() => (me ? go("seller") : open("auth"))}
-        >
-          <Grid2X2 size={20} />
-          <span>Creator studio</span>
-        </button>
         <button
           className="button primary create-main"
           onClick={() => (me ? open("create") : open("auth"))}
         >
-          <Plus size={19} /> Create something
+          <Plus size={21} /> Create post
         </button>
         <div className="sidebar-bottom">
-          <div className="inspiration-note">
-            <span className="tiny-flower">✻</span>
-            <p>
-              Good things happen
-              <br />
-              when creatives connect.
-            </p>
-            <button onClick={() => go("explore")}>
-              Find your people <ArrowUpRight size={14} />
-            </button>
-          </div>
+          <button
+            className="nav-item studio-profile"
+            onClick={() => (me ? profile(me.id) : open("auth"))}
+          >
+            <Avatar user={me || { name: "You" }} size={34} />
+            <span>
+              <strong>{me?.name || "Your creative space"}</strong>
+              <small>{me ? "View profile" : "Sign in / Join"}</small>
+            </span>
+          </button>
           <div className="sidebar-controls">
             <button onClick={() => (me ? open("settings") : open("auth"))}>
               <Settings size={17} /> Settings
@@ -686,47 +727,36 @@ export default function App() {
             </IconButton>
           </div>
           <button
-            className="account"
-            onClick={() => (me ? profile(me.id) : open("auth"))}
+            className="nav-item"
+            onClick={() => (me ? go("seller") : open("auth"))}
           >
-            <Avatar user={me || { name: "Your creative space" }} />
-            <span>
-              <strong>{me?.name || "Make yourself at home"}</strong>
-              <small>{me ? `@${me.username}` : "Join the community"}</small>
-            </span>
-            <MoreHorizontal size={18} />
+            <Grid2X2 size={19} />
+            <span>Creator studio</span>
           </button>
+          <div className="studio-footer">
+            <button onClick={() => open("about")}>About</button>
+            <button onClick={() => open("help")}>Help</button>
+            <button onClick={() => open("privacy")}>Privacy</button>
+          </div>
         </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
           <div className="topbar-breadcrumb">
             <IconButton
-              label="Toggle navigation"
+              label={mobileNav ? "Close navigation" : "Open navigation"}
               className="mobile-menu"
               onClick={() => setMobileNav(!mobileNav)}
             >
               <Menu size={20} />
             </IconButton>
-            <span>
-              {page === "home"
-                ? "Your daily dose of inspiration"
-                : page === "marketplace"
-                  ? "Made by creatives, for creatives"
-                  : page === "messages"
-                    ? "Good conversations start here"
-                    : page === "profile"
-                      ? "A little about the creator"
-                      : "Your creative corner"}
-            </span>
-            <span className="desktop-star">✻</span>
           </div>
           <div className="topbar-actions">
             <div className="search-wrap">
               <Search size={17} />
               <input
                 aria-label="Search Nexirel"
-                placeholder="Search for inspiration..."
+                placeholder="Search for inspiration, creators or downloads…"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -734,7 +764,7 @@ export default function App() {
                 }}
                 onFocus={() => query && setSearchOpen(true)}
               />
-              <kbd>⌘ K</kbd>
+              <kbd>Ctrl K</kbd>
               {searchOpen && (
                 <div className="search-results">
                   <div className="eyebrow">CREATORS</div>
@@ -790,86 +820,63 @@ export default function App() {
             </button>
           </div>
         </header>
-        <div
-          className={`content-layout ${["messages", "profile", "seller", "downloads", "admin"].includes(page) ? "wide-layout" : ""}`}
-        >
-          <main className="main-content">
+        <div className="content-layout wide-layout">
+          <main id="main-content" className="main-content" tabIndex={-1}>
             {["home", "explore", "saved"].includes(page) && (
               <>
-                <div className="page-heading">
+                <div className="page-heading feed-heading">
+                  <button
+                    className="feed-filter-toggle"
+                    aria-label="Filter feed"
+                    aria-expanded={feedFiltersOpen}
+                    aria-controls="feed-filters"
+                    onClick={() => setFeedFiltersOpen(!feedFiltersOpen)}
+                  >
+                    <SlidersHorizontal size={17} />
+                    <span>Filter feed</span>
+                  </button>
                   <div>
-                    <div className="eyebrow">A SPACE FOR YOUR NEXT IDEA</div>
+                    <div className="eyebrow">
+                      {page === "saved" ? "YOUR COLLECTION" : "COMMUNITY FEED"}
+                    </div>
                     <h1>
                       {page === "saved"
                         ? "Your inspiration, collected."
                         : page === "explore"
                           ? "Follow your curiosity."
-                          : "A little more inspired."}
-                      <span className="heading-spark">✻</span>
+                          : "Made to stand out."}
+                      <Asterisk
+                        className="heading-spark"
+                        size={45}
+                        aria-hidden="true"
+                      />
                     </h1>
                     <p>
                       {page === "saved"
                         ? "The work you love, ready when you need a spark."
-                        : "Fresh perspectives. Beautiful work. Your kind of people."}
+                        : "Discover inspiring work, talented creators and unique digital downloads."}
                     </p>
                   </div>
                 </div>
-                {page !== "saved" && (
-                  <>
-                    <div className="feed-tabs">
-                      <div>
-                        {["Discover", "Following"].map((t) => (
-                          <button
-                            className={tab === t ? "active" : ""}
-                            key={t}
-                            onClick={() => {
-                              setTab(t);
-                              setLimit(6);
-                            }}
-                          >
-                            {t}
-                            {t === "Discover" && (
-                              <span className="tab-spark">✧</span>
-                            )}
-                            {t === "Following" && data.follows.length > 0 && (
-                              <span className="count">
-                                {data.follows.length}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                      <span className="feed-label">
-                        <span /> A fresh perspective, every day
-                      </span>
-                    </div>
-                    <div className="category-row">
-                      {categories.map((c) => (
-                        <button
-                          className={category === c ? "selected" : ""}
-                          onClick={() => {
-                            setCategory(c);
-                            setLimit(6);
-                          }}
-                          key={c}
-                        >
-                          {c === "For you" && <Sparkles size={13} />} {c}
-                        </button>
-                      ))}
-                      <IconButton
-                        label="Reset filters"
-                        onClick={() => {
-                          setCategory("For you");
-                          setTab("Discover");
-                          tell(
-                            "Showing the latest posts from every discipline.",
-                          );
-                        }}
-                      >
-                        <SlidersHorizontal size={16} />
-                      </IconButton>
-                    </div>
-                  </>
+                {(category !== "For you" || tab === "Following" || query) && (
+                  <div className="active-feed-filter">
+                    <span>
+                      {query
+                        ? `Search: ${query}`
+                        : category !== "For you"
+                          ? category
+                          : "Following"}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setCategory("For you");
+                        setTab("Discover");
+                        setQuery("");
+                      }}
+                    >
+                      Clear filters <X size={13} />
+                    </button>
+                  </div>
                 )}
                 {loading ? (
                   <div className="masonry">
@@ -879,15 +886,123 @@ export default function App() {
                   </div>
                 ) : posts.length ? (
                   <>
-                    <div className="masonry">
-                      {[0, 1].map((col) => (
-                        <div className="masonry-column" key={col}>
-                          {posts
-                            .slice(0, limit)
-                            .filter((_, i) => i % 2 === col)
-                            .map(postCard)}
+                    {page !== "saved" && postCard(posts[0], true)}
+                    {page === "home" &&
+                      products.length > 0 &&
+                      !query &&
+                      category === "For you" &&
+                      tab === "Discover" && (
+                        <section
+                          className="download-shelf"
+                          aria-label="Digital downloads"
+                        >
+                          <div className="shelf-heading">
+                            <div>
+                              <h2>Downloads worth opening</h2>
+                              <p>Digital assets from independent creators.</p>
+                            </div>
+                            <button
+                              className="text-button"
+                              onClick={() => {
+                                setCategory("For you");
+                                go("marketplace");
+                              }}
+                            >
+                              Browse marketplace <ArrowRight size={17} />
+                            </button>
+                          </div>
+                          <div className="shelf-products">
+                            {products.slice(0, 2).map((product: Item) => (
+                              <button
+                                key={product.id}
+                                className="shelf-product"
+                                onClick={() => open("product", product)}
+                              >
+                                {product.image && (
+                                  <img src={product.image} alt="" />
+                                )}
+                                <span>
+                                  <strong>{product.title}</strong>
+                                  <small>
+                                    {product.seed ? "Sample resource · " : ""}
+                                    {product.format || product.category}
+                                  </small>
+                                </span>
+                                <b>
+                                  ${product.price} <small>USD</small>
+                                </b>
+                                <ChevronRight size={20} />
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+                    {page !== "saved" && feedFiltersOpen && (
+                      <section id="feed-filters" aria-label="Feed filters">
+                        <div className="feed-tabs">
+                          <div>
+                            {["Discover", "Following"].map((t) => (
+                              <button
+                                className={tab === t ? "active" : ""}
+                                key={t}
+                                onClick={() => {
+                                  setTab(t);
+                                  setLimit(6);
+                                }}
+                              >
+                                {t}
+                                {t === "Discover" && (
+                                  <Sparkles
+                                    className="tab-spark"
+                                    size={14}
+                                    aria-hidden="true"
+                                  />
+                                )}
+                                {t === "Following" &&
+                                  data.follows.length > 0 && (
+                                    <span className="count">
+                                      {data.follows.length}
+                                    </span>
+                                  )}
+                              </button>
+                            ))}
+                          </div>
+                          <span className="feed-label">
+                            <span /> A fresh perspective, every day
+                          </span>
                         </div>
-                      ))}
+                        <div className="category-row">
+                          {categories.map((c) => (
+                            <button
+                              className={category === c ? "selected" : ""}
+                              onClick={() => {
+                                setCategory(c);
+                                setLimit(6);
+                              }}
+                              key={c}
+                            >
+                              {c === "For you" && <Sparkles size={13} />} {c}
+                            </button>
+                          ))}
+                          <IconButton
+                            label="Reset filters"
+                            onClick={() => {
+                              setCategory("For you");
+                              setTab("Discover");
+                              tell(
+                                "Showing the latest posts from every discipline.",
+                              );
+                            }}
+                          >
+                            <SlidersHorizontal size={16} />
+                          </IconButton>
+                        </div>
+                      </section>
+                    )}
+                    <div className="studio-post-grid">
+                      {posts
+                        .slice(page === "saved" ? 0 : 1, limit)
+                        .map((post) => postCard(post))}
                     </div>
                     {posts.length > limit ? (
                       <button
@@ -899,31 +1014,46 @@ export default function App() {
                     ) : (
                       <p className="feed-end">
                         You’re all caught up. Go make something good.{" "}
-                        <span>✻</span>
+                        <Asterisk size={16} aria-hidden="true" />
                       </p>
                     )}
                   </>
                 ) : (
-                  empty(
-                    page === "saved"
-                      ? "Keep a little inspiration."
-                      : "A fresh start.",
-                    page === "saved"
-                      ? "Tap the bookmark on any post to find it here."
-                      : tab === "Following"
-                        ? "Follow a few creators and their latest work will appear here."
-                        : "Try another creative discipline or search.",
-                    "Explore creators",
-                    () => {
-                      setTab("Discover");
-                      setCategory("For you");
-                      go("explore");
-                    },
-                  )
+                  <>
+                    {page !== "saved" && (
+                      <div className="empty-filter-reset">
+                        <button
+                          className="button secondary"
+                          onClick={() => {
+                            setCategory("For you");
+                            setTab("Discover");
+                            setQuery("");
+                          }}
+                        >
+                          Show all posts
+                        </button>
+                      </div>
+                    )}
+                    {empty(
+                      page === "saved"
+                        ? "Keep a little inspiration."
+                        : "A fresh start.",
+                      page === "saved"
+                        ? "Tap the bookmark on any post to find it here."
+                        : tab === "Following"
+                          ? "Follow a few creators and their latest work will appear here."
+                          : "Try another creative discipline or search.",
+                      "Explore creators",
+                      () => {
+                        setTab("Discover");
+                        setCategory("For you");
+                        go("explore");
+                      },
+                    )}
+                  </>
                 )}
                 <div className="seed-note">
-                  Curated sample work · Original sample artwork · Discover shows
-                  recent posts
+                  Sample work is labeled. Your posts appear in the same feed.
                 </div>
               </>
             )}
@@ -932,8 +1062,8 @@ export default function App() {
                 <div className="page-heading">
                   <div className="eyebrow">THE CREATIVE MARKETPLACE</div>
                   <h1>
-                    Your next great starting point
-                    <span className="heading-spark">↗</span>
+                    Make your next great thing
+                    <ArrowUpRight className="heading-spark" size={38} />
                   </h1>
                   <p>
                     Thoughtful resources from independent creators. Make them
@@ -959,16 +1089,11 @@ export default function App() {
                       Explore the collection <ArrowUpRight size={16} />
                     </button>
                   </div>
-                  <div className="banner-shapes">
-                    <div />
-                    <div />
-                    <div />
-                    <span>
-                      FORM
-                      <br />
-                      <i>& FUNCTION</i>
-                    </span>
-                  </div>
+                  <img
+                    className="market-banner-art"
+                    src="/studio/liquid-dreams.webp"
+                    alt="Iridescent liquid chrome sculpture"
+                  />
                 </div>
                 <div className="market-filters">
                   <div className="category-row">
@@ -1030,7 +1155,11 @@ export default function App() {
                     <br />
                     when they’re shared.
                   </span>
-                  <span className="cover-flower">✻</span>
+                  <Asterisk
+                    className="cover-flower"
+                    size={90}
+                    aria-hidden="true"
+                  />
                 </div>
                 <div className="profile-info">
                   <Avatar user={currentProfile} size={88} />
@@ -1120,7 +1249,9 @@ export default function App() {
                     <div className="masonry">
                       {[0, 1].map((col) => (
                         <div className="masonry-column" key={col}>
-                          {posts.filter((_, i) => i % 2 === col).map(postCard)}
+                          {posts
+                            .filter((_, i) => i % 2 === col)
+                            .map((post) => postCard(post))}
                         </div>
                       ))}
                     </div>
@@ -1625,168 +1756,6 @@ export default function App() {
               </div>
             )}
           </main>
-          {!["messages", "profile", "seller", "downloads", "admin"].includes(
-            page,
-          ) && (
-            <aside className="right-panel">
-              <div className="community-card">
-                <div className="community-decoration">
-                  ✻<span>✧</span>
-                </div>
-                <span className="eyebrow">BETTER, TOGETHER</span>
-                <h2>
-                  Your people.
-                  <br />
-                  Your possibilities.
-                </h2>
-                <p>
-                  A community for the things
-                  <br />
-                  you love to make.
-                </p>
-                <button onClick={() => (me ? open("create") : open("auth"))}>
-                  {me ? "Share your latest work" : "Find your creative circle"}{" "}
-                  <ArrowUpRight size={16} />
-                </button>
-                <div className="community-avatars">
-                  {users.slice(0, 4).map((u) => (
-                    <Avatar user={u} key={u.id} size={27} />
-                  ))}
-                  <span>Room for you, too.</span>
-                </div>
-              </div>
-              <section className="creators-panel">
-                <div className="panel-heading">
-                  <h3>People to inspire you</h3>
-                  <span>✧</span>
-                </div>
-                {users
-                  .filter((u) => u.id !== me?.id)
-                  .slice(0, 3)
-                  .map((u) => (
-                    <div className="suggested-person" key={u.id}>
-                      <button className="creator" onClick={() => profile(u.id)}>
-                        <Avatar user={u} size={38} />
-                        <span>
-                          <strong>{u.name}</strong>
-                          <small>{u.discipline.split(" & ")[0]}</small>
-                        </span>
-                      </button>
-                      <IconButton
-                        label={
-                          data.follows.includes(u.id)
-                            ? `Unfollow ${u.name}`
-                            : `Follow ${u.name}`
-                        }
-                        className={
-                          data.follows.includes(u.id)
-                            ? "follow-button following"
-                            : "follow-button"
-                        }
-                        onClick={() => action("follow", { target: u.id })}
-                      >
-                        {data.follows.includes(u.id) ? (
-                          <Check size={15} />
-                        ) : (
-                          <Plus size={15} />
-                        )}
-                      </IconButton>
-                    </div>
-                  ))}
-                <button className="panel-link" onClick={() => open("new-chat")}>
-                  Discover more creators <ArrowRight size={14} />
-                </button>
-              </section>
-              <section className="trending-panel">
-                <h3>A little inspiration</h3>
-                {[
-                  {
-                    name: "# MadeInBlender",
-                    text: "Ideas taking shape",
-                    tone: "lilac",
-                    icon: Grid2X2,
-                  },
-                  {
-                    name: "# BrandNewThinking",
-                    text: "A fresh point of view",
-                    tone: "peach",
-                    icon: Palette,
-                  },
-                  {
-                    name: "# EverydayMagic",
-                    text: "Beauty in the ordinary",
-                    tone: "sage",
-                    icon: Sun,
-                  },
-                ].map((t) => (
-                  <button
-                    key={t.name}
-                    onClick={() => {
-                      setCategory(
-                        t.tone === "lilac"
-                          ? "3D art"
-                          : t.tone === "peach"
-                            ? "Graphic design"
-                            : "Photography",
-                      );
-                      setTab("Discover");
-                      go("explore");
-                    }}
-                  >
-                    <span className={`trend-icon ${t.tone}`}>
-                      <t.icon size={17} />
-                    </span>
-                    <span>
-                      <strong>{t.name}</strong>
-                      <small>{t.text}</small>
-                    </span>
-                    <ArrowUpRight size={14} />
-                  </button>
-                ))}
-              </section>
-              <section className="market-teaser">
-                <div className="panel-heading">
-                  <h3>Made for your next idea</h3>
-                  <ArrowUpRight size={16} />
-                </div>
-                <button
-                  className="teaser-image"
-                  onClick={() => {
-                    setCategory("For you");
-                    go("marketplace");
-                  }}
-                >
-                  <img
-                    src={image("photo-1600210492486-724fe5c67fb0", 500)}
-                    alt="Minimal interior design inspiration"
-                  />
-                  <span>THE CREATOR’S TOOLKIT</span>
-                </button>
-                <p>Thoughtful tools. By independent minds.</p>
-                <button
-                  className="panel-link"
-                  onClick={() => {
-                    setCategory("For you");
-                    go("marketplace");
-                  }}
-                >
-                  Explore the marketplace <ArrowRight size={14} />
-                </button>
-              </section>
-              <footer>
-                <div>
-                  <button onClick={() => open("about")}>About</button>
-                  <button onClick={() => open("guidelines")}>Guidelines</button>
-                  <button onClick={() => open("privacy")}>Privacy</button>
-                  <button onClick={() => open("help")}>Help</button>
-                </div>
-                <span>
-                  © {new Date().getFullYear()} Nexirel. Made for the makers.
-                </span>
-                <span className="footer-flower">✻</span>
-              </footer>
-            </aside>
-          )}
         </div>
       </div>
       <nav className="mobile-bottom">
@@ -1854,7 +1823,11 @@ export default function App() {
             </IconButton>
             {modal === "auth" && (
               <>
-                <span className="modal-flower">✻</span>
+                <Asterisk
+                  className="modal-flower"
+                  size={42}
+                  aria-hidden="true"
+                />
                 <div className="eyebrow">A HOME FOR YOUR CREATIVE SIDE</div>
                 <h2>
                   {authMode === "register"
@@ -2819,7 +2792,11 @@ export default function App() {
             )}
             {["about", "guidelines", "privacy", "help"].includes(modal) && (
               <>
-                <span className="modal-flower">✻</span>
+                <Asterisk
+                  className="modal-flower"
+                  size={42}
+                  aria-hidden="true"
+                />
                 <h2>
                   {modal === "about"
                     ? "A home for creative minds."

@@ -24,7 +24,7 @@ try {
     true,
   );
   await page
-    .getByRole("button", { name: "Create something", exact: true })
+    .getByRole("button", { name: "Create post", exact: true })
     .click();
   await page.getByLabel("Your name", { exact: true }).fill("Test Buyer");
   const suffix = Date.now();
@@ -47,7 +47,7 @@ try {
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page
-    .getByRole("button", { name: "Create something", exact: true })
+    .getByRole("button", { name: "Create post", exact: true })
     .click();
   await page
     .getByLabel("Your story", { exact: true })
