@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
+import { uploadDirect } from "@/lib/direct-upload";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -291,20 +292,7 @@ export default function App() {
     action("read", { from: id });
   }
   async function upload(file: File, privateFile = false) {
-    if (file.size > 10 * 1024 * 1024)
-      throw new Error("Choose a file smaller than 10 MB.");
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result).split(",")[1]);
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
-    const result = await api("upload", {
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      base64,
-      private: privateFile,
-    });
+    const result = await uploadDirect(file, privateFile, api);
     setData((d) => ({
       ...d,
       mediaTypes: { ...d.mediaTypes, [result.url]: file.type },

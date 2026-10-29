@@ -34,3 +34,12 @@ test("hosting HTML is never displayed to the user", async () => {
     /invalid response \(HTTP 502\)/,
   );
 });
+
+test("hosting 413 explains upload size instead of JSON parsing", async () => {
+  await assert.rejects(
+    readApiResponse(
+      new Response("FUNCTION_PAYLOAD_TOO_LARGE", { status: 413 }),
+    ),
+    /file is too large/i,
+  );
+});

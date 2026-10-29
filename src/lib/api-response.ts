@@ -1,5 +1,10 @@
 // Hosting failures can return empty bodies or HTML before a route handler runs.
 export async function readApiResponse(res: Response): Promise<any> {
+  if (res.status === 413) {
+    throw new Error(
+      "The file is too large for this upload request. Refresh the page and select a smaller file.",
+    );
+  }
   const text = await res.text();
   let data: any;
   try {

@@ -5,6 +5,9 @@ export function installSupabaseFixture() {
   process.env.SUPABASE_SECRET_KEY = "sb_secret_fixture";
   const records = new Map<string, any>();
   const accounts = new Map<string, any>();
+  const storageObjects = new Map<string, { bytes: Buffer; type: string }>();
+  const uploadTokens = new Map<string, string>();
+  let bucketExists = true;
   let confirmationRequired = false;
   let unavailable = false;
   let counter = 0;
@@ -50,6 +53,71 @@ export function installSupabaseFixture() {
       return json({ code: "PGRST205", message: "Missing runtime table" }, 503);
     const method = init?.method || "GET";
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : {};
+    if (url.pathname.startsWith("/storage/v1/")) {
+      if (!bucketExists)
+        return json(
+          {
+            message: "Bucket not found",
+            statusCode: "404",
+            error: "not_found",
+          },
+          400,
+        );
+      const root = "/storage/v1/object/";
+      const upload = root + "upload/sign/voidstack-media/";
+      const signed = root + "sign/voidstack-media/";
+      const info = root + "info/voidstack-media/";
+      if (url.pathname.startsWith(upload)) {
+        const path = url.pathname.slice(upload.length);
+        if (method === "POST") {
+          const token = "upload_" + path.replaceAll("/", "_");
+          uploadTokens.set(token, path);
+          return json({
+            url:
+              "/object/upload/sign/voidstack-media/" + path + "?token=" + token,
+          });
+        }
+        if (method === "PUT") {
+          if (uploadTokens.get(url.searchParams.get("token") || "") !== path)
+            return json({ message: "Invalid upload token" }, 403);
+          if (storageObjects.has(path))
+            return json({ message: "The resource already exists" }, 409);
+          const form = init?.body as FormData;
+          const file = [...form.values()].find(
+            (v) => v instanceof Blob,
+          ) as File;
+          if (!file) throw new Error("Expected direct multipart file upload");
+          storageObjects.set(path, {
+            bytes: Buffer.from(await file.arrayBuffer()),
+            type: file.type,
+          });
+          return json({ Key: "voidstack-media/" + path });
+        }
+      }
+      if (url.pathname.startsWith(info)) {
+        const object = storageObjects.get(url.pathname.slice(info.length));
+        return object
+          ? json({ size: object.bytes.length, content_type: object.type })
+          : json({ message: "Object not found" }, 404);
+      }
+      if (url.pathname.startsWith(signed)) {
+        const path = url.pathname.slice(signed.length);
+        if (method === "POST")
+          return json({
+            signedURL:
+              "/object/sign/voidstack-media/" + path + "?token=read_fixture",
+          });
+        const object = storageObjects.get(path);
+        if (!object) return json({ message: "Object not found" }, 404);
+        if (url.searchParams.get("token") !== "read_fixture")
+          return json({ message: "Invalid read token" }, 403);
+        return new Response(new Uint8Array(object.bytes.subarray(0, 32)), {
+          status: 206,
+          headers: { "content-type": object.type },
+        });
+      }
+      throw new Error("Unhandled storage URL: " + url.pathname);
+    }
     if (url.pathname.startsWith("/rest/v1/voidstack_records")) {
       if (new Headers(init?.headers).get("apikey") !== "sb_secret_fixture")
         return json({ message: "Permission denied" }, 403);
@@ -139,6 +207,10 @@ export function installSupabaseFixture() {
   return {
     records,
     accounts,
+    storageObjects,
+    setBucketExists: (value: boolean) => {
+      bucketExists = value;
+    },
     setConfirmationRequired: (v: boolean) => {
       confirmationRequired = v;
     },

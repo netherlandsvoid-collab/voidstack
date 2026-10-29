@@ -8,7 +8,10 @@ filesystem are required. Existing app interfaces and ownership checks are preser
 
 1. In Supabase **SQL Editor**, run
    [`supabase/migrations/002_vercel_runtime.sql`](supabase/migrations/002_vercel_runtime.sql).
-   Run this file only. `001_optional_production_schema.sql` is a historical,
+   For image/file uploads, also run
+   [`supabase/migrations/003_media_storage.sql`](supabase/migrations/003_media_storage.sql)
+   to create the private `voidstack-media` bucket with a 10 MB per-file limit.
+   `001_optional_production_schema.sql` is a historical,
    unused normalized-schema proposal and is not the schema this adapter reads.
 2. In Vercel, open **voidstack → Settings → Environment Variables** and set:
 
@@ -66,11 +69,21 @@ Cross-instance notifications use the existing 30-second polling. `/api/events`
 returns 204 to stop the old process-local SSE connection on serverless hosts.
 Supabase Realtime and a normalized query/pagination architecture are not included.
 
-Uploads currently remain encoded in Postgres record data. This is suitable only
-for small existing app uploads; the former 10 MB upload ceiling exceeds Vercel's
-request-body limit. Move binary uploads to Supabase Storage with signed direct
-uploads before advertising large videos or project-file uploads. Public feed
-queries still scan record types and require pagination/query optimization at scale.
+New uploads go directly from the browser to a private Supabase Storage bucket
+using a server-issued, path-scoped signed upload token. Only small metadata
+requests pass through Vercel. The API verifies session, ownership, actual size,
+content type and common file signatures before making an upload available.
+All files are capped at 10 MB; archive/project files are never executed.
+
+The existing `/api/media/:id` URLs remain stable. After access checks, the route
+redirects to a short-lived signed Storage URL so large responses also avoid
+Vercel's payload limit. Private messages remain participant-only, and product
+files still require the signed paid-download flow. Older base64 records continue
+to work. The bucket is private and needs no public read/write RLS policies.
+
+Abandoned or rejected objects remain private; scheduled cleanup and full malware
+scanning/media decoding are not included. Public feed queries still scan record
+types and require pagination/query optimization at scale.
 Password recovery retains the honest "no reset email sent" placeholder until a
 recovery and password-update flow is implemented.
 

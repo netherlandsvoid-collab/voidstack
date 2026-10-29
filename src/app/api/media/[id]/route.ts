@@ -1,4 +1,5 @@
 import { get, session, withAuth } from "@/lib/server";
+import { signedMediaUrl } from "@/lib/media";
 async function handleGET(
   req: Request,
   {
@@ -22,6 +23,7 @@ async function handleGET(
         { status: 403 },
       );
   }
+  if (f.storagePath) return Response.redirect(await signedMediaUrl(f), 307);
   return new Response(Buffer.from(f.base64, "base64"), {
     headers: {
       "Content-Type": f.type,

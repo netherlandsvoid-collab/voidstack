@@ -64,3 +64,27 @@ test("Postgres migration: atomic profiles, unique usernames, and server-only dat
     await db.close();
   }
 });
+
+test("media migration creates an idempotent private 10 MB bucket", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      "create schema storage; create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);",
+    );
+    const sql = readFileSync(
+      new URL("../supabase/migrations/003_media_storage.sql", import.meta.url),
+      "utf8",
+    );
+    await db.exec(sql);
+    await db.exec(sql);
+    const result = await db.query<any>("select * from storage.buckets");
+    assert.equal(result.rows.length, 1);
+    assert.equal(result.rows[0].id, "voidstack-media");
+    assert.equal(result.rows[0].public, false);
+    assert.equal(Number(result.rows[0].file_size_limit), 10 * 1024 * 1024);
+    assert.ok(result.rows[0].allowed_mime_types.includes("image/jpeg"));
+    assert.ok(!result.rows[0].allowed_mime_types.includes("image/svg+xml"));
+  } finally {
+    await db.close();
+  }
+});
