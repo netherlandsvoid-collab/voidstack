@@ -236,17 +236,34 @@ export default function App() {
       previous?.focus();
     };
   }, [modal]);
-  async function api(action: string, body: Item = {}) {
-    const res = await fetch("/api/" + action, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const d = await res.json();
-    if (!res.ok)
-      throw new Error(d.error || "Something went wrong. Please retry.");
-    return d;
+ async function api(action: string, body: Item = {}) {
+  const res = await fetch("/api/" + action, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  let data: any;
+
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `The server returned an invalid response (HTTP ${res.status}). Please try again later.`
+    );
   }
+
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.error === "string"
+        ? data.error
+        : `The request failed (HTTP ${res.status}).`
+    );
+  }
+
+  return data;
+}
   async function action(name: string, body: Item = {}, success = "") {
     if (!me) {
       setAuthMode("register");
