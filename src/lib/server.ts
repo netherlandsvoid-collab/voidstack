@@ -1,87 +1,249 @@
 import { EventEmitter } from "node:events";
-import { DatabaseSync } from "node:sqlite";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { randomBytes, createHmac } from "node:crypto";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
-  randomBytes,
-  scryptSync,
-  timingSafeEqual,
-  createHmac,
-} from "node:crypto";
-import { mkdirSync } from "node:fs";
+  createServerClient,
+  parseCookieHeader,
+  serializeCookieHeader,
+} from "@supabase/ssr";
 import { seedUsers, seedPosts, seedProducts } from "./seed";
+
+// Never initialize a database or write files at module import time.
 const shared = globalThis as typeof globalThis & { nxEvents?: EventEmitter };
 export const events = shared.nxEvents || (shared.nxEvents = new EventEmitter());
 events.setMaxListeners(200);
-mkdirSync(process.env.DATA_DIR || ".data", { recursive: true });
-const db = new DatabaseSync(
-  `${process.env.DATA_DIR || ".data"}/nexirel.sqlite`,
-);
-db.exec(
-  `PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records (kind TEXT, id TEXT, data TEXT NOT NULL, PRIMARY KEY(kind,id));`,
-);
-export function all(kind: string): any[] {
-  return (
-    db.prepare("SELECT data FROM records WHERE kind=?").all(kind) as {
-      data: string;
-    }[]
-  ).map((r) => JSON.parse(r.data));
+export class BackendError extends Error {
+  status = 503;
 }
-export function get(kind: string, id: string): any {
-  const r = db
-    .prepare("SELECT data FROM records WHERE kind=? AND id=?")
-    .get(kind, id) as { data: string } | undefined;
-  return r ? JSON.parse(r.data) : undefined;
+function config(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new BackendError(`Server configuration missing: ${name}.`);
+  return value;
 }
-export function put(kind: string, v: any) {
-  db.prepare("INSERT OR REPLACE INTO records(kind,id,data) VALUES(?,?,?)").run(
-    kind,
-    v.id,
-    JSON.stringify(v),
+export function database(): SupabaseClient {
+  return createClient(
+    config("NEXT_PUBLIC_SUPABASE_URL"),
+    config("SUPABASE_SECRET_KEY"),
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
+      },
+    },
   );
-  events.emit("change");
-  return v;
 }
-export function del(kind: string, id: string) {
-  db.prepare("DELETE FROM records WHERE kind=? AND id=?").run(kind, id);
+function databaseError(error: { code?: string; message: string }): never {
+  console.error("Supabase database:", error.code, error.message);
+  if (error.code === "23505")
+    throw new Error("That username is already taken.");
+  throw new BackendError(
+    "Database unavailable. Check the Supabase migration and server configuration.",
+  );
+}
+const samples: Record<string, any[]> = {
+  user: seedUsers.map((u) => ({ ...u, seed: true, createdAt: 0 })),
+  post: seedPosts.map((p, i) => ({
+    ...p,
+    seed: true,
+    media: [p.image],
+    createdAt: 1700000000000 - i * 3600000,
+  })),
+  product: seedProducts.map((p) => ({
+    ...p,
+    seed: true,
+    licence: "Personal use. No redistribution or resale of source files.",
+    software: "See included documentation",
+    createdAt: 1700000000000,
+  })),
+};
+export async function all(kind: string): Promise<any[]> {
+  const rows: any[] = [];
+  // PostgREST caps individual pages; do not silently lose records above 1000.
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await database()
+      .from("voidstack_records")
+      .select("id,data")
+      .eq("kind", kind)
+      .order("id")
+      .range(offset, offset + 999);
+    if (error) databaseError(error);
+    rows.push(...data!.map((r) => r.data));
+    if (data!.length < 1000) break;
+  }
+  const ids = new Set(rows.map((r) => r.id));
+  return [...(samples[kind] || []).filter((r) => !ids.has(r.id)), ...rows];
+}
+export async function get(kind: string, id: string): Promise<any> {
+  const { data, error } = await database()
+    .from("voidstack_records")
+    .select("data")
+    .eq("kind", kind)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) databaseError(error);
+  return data?.data || samples[kind]?.find((r) => r.id === id);
+}
+export async function put(kind: string, value: any): Promise<any> {
+  const { error } = await database()
+    .from("voidstack_records")
+    .upsert({ kind, id: value.id, data: value }, { onConflict: "kind,id" });
+  if (error) databaseError(error);
+  events.emit("change");
+  return value;
+}
+export async function del(kind: string, id: string) {
+  const { error } = await database()
+    .from("voidstack_records")
+    .delete()
+    .eq("kind", kind)
+    .eq("id", id);
+  if (error) databaseError(error);
   events.emit("change");
 }
 export const uid = () => randomBytes(16).toString("hex");
-export function hash(password: string, salt = randomBytes(16).toString("hex")) {
-  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
-}
-export function verify(password: string, stored: string) {
-  const [salt, h] = stored.split(":");
-  return timingSafeEqual(Buffer.from(h, "hex"), scryptSync(password, salt, 64));
-}
-export function publicUser(u: any) {
+export async function publicUser(u: any) {
   if (!u) return null;
   const { password, email, ...safe } = u;
   return {
     ...safe,
-    followers: all("follow").filter((f) => f.target === u.id).length,
+    followers: (await all("follow")).filter((f) => f.target === u.id).length,
   };
 }
-export function session(req: Request) {
-  const token = req.headers
-    .get("cookie")
-    ?.match(/(?:^|; )nx_session=([^;]+)/)?.[1];
-  const s = token ? get("session", token) : null;
-  const user = s && s.expires > Date.now() ? get("user", s.userId) : null;
-  return user && !user.disabled ? user : null;
+
+type AuthContext = {
+  client: SupabaseClient;
+  headers: string[];
+  user?: Promise<any>;
+};
+const authContext = new AsyncLocalStorage<AuthContext>();
+export function authClient(): SupabaseClient {
+  const context = authContext.getStore();
+  if (!context) throw new Error("Authentication requires a request context.");
+  return context.client;
 }
-export function requireUser(req: Request) {
-  const u = session(req);
+// All authentication happens in route handlers. Persist every SSR token refresh
+// back to the response, including errors and redirects. Never cache auth responses.
+export async function withAuth(
+  req: Request,
+  handler: () => Promise<Response>,
+): Promise<Response> {
+  const headers: string[] = [];
+  const jar = new Map(
+    parseCookieHeader(req.headers.get("cookie") || "").map((c) => [
+      c.name,
+      c.value,
+    ]),
+  );
+  try {
+    const client = createServerClient(
+      config("NEXT_PUBLIC_SUPABASE_URL"),
+      config("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
+      {
+        cookieOptions: {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        },
+        cookies: {
+          getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+          setAll: (cookies) => {
+            for (const { name, value, options } of cookies) {
+              jar.set(name, value);
+              headers.push(serializeCookieHeader(name, value, options));
+            }
+          },
+        },
+      },
+    );
+    return await authContext.run({ client, headers }, async () => {
+      let response: Response;
+      try {
+        response = await handler();
+      } catch (error) {
+        console.error(
+          "API failure:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+        response = Response.json(
+          {
+            error:
+              error instanceof BackendError
+                ? error.message
+                : "The server could not complete your request.",
+          },
+          { status: 503 },
+        );
+      }
+      // Native redirect responses have immutable headers. Copy before adding
+      // session cookies so confirmation links can establish a session too.
+      const outgoing = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers),
+      });
+      for (const cookie of headers)
+        outgoing.headers.append("set-cookie", cookie);
+      outgoing.headers.set("Cache-Control", "private, no-store");
+      return outgoing;
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof BackendError
+            ? error.message
+            : "Authentication is unavailable.",
+      },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+export async function session(_req: Request) {
+  const context = authContext.getStore();
+  if (!context) throw new Error("Authentication requires a request context.");
+  context.user ||= (async () => {
+    const { data, error } = await context.client.auth.getUser();
+    if (error) {
+      if (
+        error.name === "AuthSessionMissingError" ||
+        error.status === 400 ||
+        error.status === 401 ||
+        error.status === 403
+      )
+        return null;
+      throw new BackendError(
+        "Authentication is unavailable. Please try again later.",
+      );
+    }
+    if (!data.user) return null;
+    const profile = await get("user", data.user.id);
+    if (!profile)
+      throw new BackendError(
+        "Account profile is missing. Check the Supabase signup migration.",
+      );
+    return profile.disabled ? null : { ...profile, email: data.user.email };
+  })();
+  return context.user;
+}
+export async function requireUser(req: Request) {
+  const u = await session(req);
   if (!u) throw new Error("Please sign in to continue.");
-  if (u.disabled) throw new Error("This account has been suspended.");
   return u;
 }
-export function notify(
+export async function notify(
   userId: string,
   actorId: string,
   text: string,
   target: string,
 ) {
   if (userId !== actorId)
-    put("notification", {
+    await put("notification", {
       id: uid(),
       userId,
       actorId,
@@ -91,42 +253,16 @@ export function notify(
       createdAt: Date.now(),
     });
 }
-export function blocked(a: string, b: string) {
-  return all("block").some(
+export async function blocked(a: string, b: string) {
+  return (await all("block")).some(
     (x) =>
       (x.userId === a && x.target === b) || (x.userId === b && x.target === a),
   );
 }
-let signing = get("config", "signing");
-if (!signing)
-  signing = put("config", {
-    id: "signing",
-    key: randomBytes(32).toString("hex"),
-  });
 export function sign(value: string) {
-  return createHmac("sha256", signing.key).update(value).digest("hex");
-}
-if (!get("config", "seeded")) {
-  for (const u of seedUsers)
-    put("user", { ...u, seed: true, createdAt: Date.now() });
-  seedPosts.forEach((p, i) =>
-    put("post", {
-      ...p,
-      seed: true,
-      media: [p.image],
-      createdAt: Date.now() - i * 3600000,
-    }),
-  );
-  seedProducts.forEach((p) =>
-    put("product", {
-      ...p,
-      seed: true,
-      licence: "Personal use. No redistribution or resale of source files.",
-      software: "See included documentation",
-      createdAt: Date.now(),
-    }),
-  );
-  put("config", { id: "seeded" });
+  return createHmac("sha256", config("SUPABASE_SECRET_KEY"))
+    .update(value)
+    .digest("hex");
 }
 export function validateText(value: any, max = 2000) {
   if (typeof value !== "string" || !value.trim() || value.length > max)
@@ -144,16 +280,4 @@ export function rate(req: Request) {
   }
   if (++v.n > 100)
     throw new Error("Too many requests. Please try again in a minute.");
-}
-if (!get("config", "local_art_v1")) {
-  for (const u of seedUsers)
-    if (get("user", u.id)?.seed)
-      put("user", { ...get("user", u.id), avatar: u.avatar });
-  for (const p of seedPosts)
-    if (get("post", p.id)?.seed)
-      put("post", { ...get("post", p.id), image: p.image, media: [p.image] });
-  for (const p of seedProducts)
-    if (get("product", p.id)?.seed)
-      put("product", { ...get("product", p.id), image: p.image });
-  put("config", { id: "local_art_v1" });
 }

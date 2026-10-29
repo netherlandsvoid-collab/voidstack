@@ -1,22 +1,23 @@
+# Optional Node hosting alternative. Uses the same Supabase backend as Vercel.
 services:
   - type: web
     name: nexirel
     runtime: node
     plan: starter
-    buildCommand: npm ci --include=dev && DATA_DIR=/tmp/nexirel-build npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: false
-    disk:
-      name: nexirel-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 24.13.0
-      - key: NODE_ENV
-        value: production
-      - key: DATA_DIR
-        value: /var/data/nexirel
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
       - key: ENABLE_DEV_CHECKOUT
         value: false

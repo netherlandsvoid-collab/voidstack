@@ -13,9 +13,9 @@ async function request(path: string, body?: unknown, cookie = "") {
   } catch {
     data = await r.text();
   }
-  return { r, data, cookie: r.headers.get("set-cookie")?.split(";")[0] || "" };
+  return { r, data, cookie: r.headers.getSetCookie().map(c => c.split(";")[0]).join("; ") };
 }
-test("connected creative journeys and server access controls", async (t) => {
+test("connected creative journeys and server access controls", { skip: !process.env.TEST_URL }, async (t) => {
   const suffix = Date.now(),
     password = "long-test-password";
   let a: any,

@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { after } from "node:test";
+import { installSupabaseFixture } from "./supabase-fixture";
 import Stripe from "stripe";
-process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "nexirel-payment-test-"));
+const fixture = installSupabaseFixture();
+after(() => fixture.restore());
 const { put, get, all } = await import("../src/lib/server");
 const { processStripeEvent } = await import("../src/lib/payments");
 const stripe = new Stripe("sk_test_local_signature_verification_only");
@@ -29,9 +29,9 @@ test("Stripe verifies the exact raw body and rejects tampering", () => {
     stripe.webhooks.constructEvent(payload, signature, "wrong_secret"),
   );
 });
-test("payment events verify amount/session and are idempotent", () => {
-  put("product", { id: "test_product", userId: "mila" });
-  put("order", {
+test("payment events verify amount/session and are idempotent", async () => {
+  await put("product", { id: "test_product", userId: "mila" });
+  await put("order", {
     id: "test_order",
     productId: "test_product",
     userId: "buyer",
@@ -57,16 +57,16 @@ test("payment events verify amount/session and are idempotent", () => {
   } as unknown as Stripe.Event;
   const bad = structuredClone(event) as any;
   bad.data.object.amount_total = 1;
-  assert.throws(() => processStripeEvent(bad), /does not match/);
-  assert.equal(get("order", "test_order").status, "pending");
-  assert.equal(get("stripe-event", "evt_order"), undefined);
-  processStripeEvent(event);
-  assert.equal(get("order", "test_order").status, "paid");
-  const count = all("notification").length;
-  processStripeEvent(event);
-  assert.equal(all("notification").length, count);
+  await assert.rejects(() => processStripeEvent(bad), /does not match/);
+  assert.equal((await get("order", "test_order")).status, "pending");
+  assert.equal(await get("stripe-event", "evt_order"), undefined);
+  await processStripeEvent(event);
+  assert.equal((await get("order", "test_order")).status, "paid");
+  const count = (await all("notification")).length;
+  await processStripeEvent(event);
+  assert.equal((await all("notification")).length, count);
   const live = structuredClone(event) as any;
   live.id = "evt_live";
   live.data.object.livemode = true;
-  assert.throws(() => processStripeEvent(live), /does not match/);
+  await assert.rejects(() => processStripeEvent(live), /does not match/);
 });

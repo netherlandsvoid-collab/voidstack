@@ -1,21 +1,12 @@
-import { DatabaseSync } from "node:sqlite";
+import { createClient } from "@supabase/supabase-js";
 const username = process.argv[2];
-if (!username) {
-  console.error("Usage: node scripts/admin.mjs <existing-username>");
-  process.exit(1);
-}
-const db = new DatabaseSync(
-  `${process.env.DATA_DIR || ".data"}/nexirel.sqlite`,
-);
-const row = db
-  .prepare("SELECT id,data FROM records WHERE kind='user'")
-  .all()
-  .find((r) => JSON.parse(r.data).username === username);
-if (!row) throw new Error("User not found. Register the account first.");
-const user = JSON.parse(row.data);
-if (user.seed) throw new Error("Sample users cannot become administrators.");
-db.prepare("UPDATE records SET data=? WHERE kind='user' AND id=?").run(
-  JSON.stringify({ ...user, role: "admin" }),
-  row.id,
-);
+if (!username) throw new Error("Usage: node --env-file=.env.local scripts/admin.mjs <existing-username>");
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.SUPABASE_SECRET_KEY;
+if (!url || !key) throw new Error("Set Supabase URL and server secret in .env.local first.");
+const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+const { data, error } = await db.from("voidstack_records").select("id,data").eq("kind", "user").eq("data->>username", username).maybeSingle();
+if (error) throw error;
+if (!data) throw new Error("User not found. Register the account first.");
+const result = await db.from("voidstack_records").update({data: {...data.data, role: "admin"}}).eq("kind", "user").eq("id", data.id);
+if (result.error) throw result.error;
 console.log("Administrator role granted to the specified existing account.");
