@@ -16,7 +16,7 @@ export async function createCheckout(user: any, product: any) {
   const account = await stripe.accounts.retrieve(destination);
   if (!account.charges_enabled || !account.payouts_enabled)
     throw new Error("This seller’s payment account is not yet ready.");
-  let order = all("order").find(
+  let order = (await all("order")).find(
     (o) =>
       o.userId === user.id &&
       o.productId === product.id &&
@@ -24,7 +24,7 @@ export async function createCheckout(user: any, product: any) {
       o.status === "pending",
   );
   if (!order)
-    order = put("order", {
+    order = await put("order", {
       id: uid(),
       userId: user.id,
       productId: product.id,
@@ -62,13 +62,15 @@ export async function createCheckout(user: any, product: any) {
     },
     { idempotencyKey: `checkout:${order.id}` },
   );
-  put("order", { ...order, stripeSessionId: checkout.id });
+  await put("order", { ...order, stripeSessionId: checkout.id });
   return { url: checkout.url, orderId: order.id };
 }
-export function processStripeEvent(event: Stripe.Event) {
-  if (get("stripe-event", event.id)) return;
+export async function processStripeEvent(event: Stripe.Event) {
+  if (await get("stripe-event", event.id)) return;
   const s = event.data.object as Stripe.Checkout.Session;
-  const order = s.metadata?.orderId ? get("order", s.metadata.orderId) : null;
+  const order = s.metadata?.orderId
+    ? await get("order", s.metadata.orderId)
+    : null;
   if (
     [
       "checkout.session.completed",
@@ -86,15 +88,15 @@ export function processStripeEvent(event: Stripe.Event) {
     )
       throw new Error("Checkout does not match its order.");
     if (s.payment_status === "paid" && order.status !== "paid") {
-      put("order", { ...order, status: "paid", paidAt: Date.now() });
-      const p = get("product", order.productId);
-      notify(
+      await put("order", { ...order, status: "paid", paidAt: Date.now() });
+      const p = await get("product", order.productId);
+      await notify(
         order.userId,
         p.userId,
         "Your purchased download is ready",
         "downloads",
       );
-      notify(p.userId, order.userId, "purchased your resource", "seller");
+      await notify(p.userId, order.userId, "purchased your resource", "seller");
     }
   } else if (
     [
@@ -104,10 +106,10 @@ export function processStripeEvent(event: Stripe.Event) {
     order &&
     order.status === "pending"
   ) {
-    put("order", {
+    await put("order", {
       ...order,
       status: event.type.endsWith("expired") ? "expired" : "failed",
     });
   }
-  put("stripe-event", { id: event.id, processedAt: Date.now() });
+  await put("stripe-event", { id: event.id, processedAt: Date.now() });
 }

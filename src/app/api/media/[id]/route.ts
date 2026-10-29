@@ -1,13 +1,19 @@
-import { get, session } from "@/lib/server";
-export async function GET(
+import { get, session, withAuth } from "@/lib/server";
+async function handleGET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> },
+  {
+    params,
+  }: {
+    params: Promise<{
+      id: string;
+    }>;
+  },
 ) {
   const { id } = await params;
-  const f = get("media", id);
+  const f = await get("media", id);
   if (!f) return new Response("Not found", { status: 404 });
   if (f.private) {
-    const u = session(req);
+    const u = await session(req);
     if (!u || (u.id !== f.userId && u.id !== f.recipientId))
       return new Response("Forbidden", { status: 403 });
     if (!f.recipientId)
@@ -26,4 +32,11 @@ export async function GET(
       "Content-Security-Policy": "default-src 'none'",
     },
   });
+}
+
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  return withAuth(req, () => handleGET(req, context));
 }

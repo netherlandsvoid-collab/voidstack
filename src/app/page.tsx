@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import { readApiResponse } from "@/lib/api-response";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -159,8 +160,7 @@ export default function App() {
   const refresh = async () => {
     try {
       const res = await fetch("/api/state");
-      if (!res.ok) throw new Error("Could not load your workspace.");
-      setData(await res.json());
+      setData(await readApiResponse(res));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -236,34 +236,14 @@ export default function App() {
       previous?.focus();
     };
   }, [modal]);
- async function api(action: string, body: Item = {}) {
-  const res = await fetch("/api/" + action, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const text = await res.text();
-  let data: any;
-
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(
-      `The server returned an invalid response (HTTP ${res.status}). Please try again later.`
-    );
+  async function api(action: string, body: Item = {}) {
+    const res = await fetch("/api/" + action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return readApiResponse(res);
   }
-
-  if (!res.ok) {
-    throw new Error(
-      typeof data?.error === "string"
-        ? data.error
-        : `The request failed (HTTP ${res.status}).`
-    );
-  }
-
-  return data;
-}
   async function action(name: string, body: Item = {}, success = "") {
     if (!me) {
       setAuthMode("register");
@@ -360,7 +340,12 @@ export default function App() {
           setError(r.message);
           return;
         }
-        await api(authMode, b);
+        const result = await api(authMode, b);
+        if (result.confirmationRequired) {
+          setError(result.message);
+          setAuthMode("login");
+          return;
+        }
         tell(
           authMode === "register"
             ? "Welcome to Nexirel. Make yourself at home."

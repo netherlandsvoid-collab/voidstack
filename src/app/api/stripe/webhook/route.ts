@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET,
     );
-    processStripeEvent(event);
+    await processStripeEvent(event);
     return Response.json({ received: true });
   } catch {
     return Response.json(
