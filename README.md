@@ -29,6 +29,10 @@ filesystem are required. Existing app interfaces and ownership checks are preser
    Remove obsolete `DATA_DIR` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` variables.
 3. In Supabase **Authentication → URL Configuration**, set **Site URL** to
    `https://voidstack-rosy.vercel.app`.
+   Add `https://voidstack-rosy.vercel.app/auth/callback**` under **Redirect URLs**
+   for email changes. The restricted callback pattern also allows the SDK's PKCE
+   flow-id query parameter. Keep Secure email change enabled. The existing
+   Change email address template can keep its default `{{ .ConfirmationURL }}`.
 4. In **Authentication → Email Templates → Confirm signup**, replace the
    confirmation button/link's `{{ .ConfirmationURL }}` with:
 
@@ -85,7 +89,29 @@ Abandoned or rejected objects remain private; scheduled cleanup and full malware
 scanning/media decoding are not included. Public feed queries still scan record
 types and require pagination/query optimization at scale.
 Password recovery retains the honest "no reset email sent" placeholder until a
-recovery and password-update flow is implemented.
+forgotten-password recovery flow is implemented.
+
+## Account settings and sale posts
+
+Settings includes profile details, a unique username, email changes and password
+changes. Sensitive changes require the current password and an active session.
+Email changes remain pending until Supabase's required confirmations are complete;
+open confirmation links in the browser that requested the change, or sign in with
+the confirmed new address afterward. Passwords stay in Supabase Auth. The signed-in
+user's email appears only in the private `me` response, never public creator data.
+Forgotten-password recovery is still separate from signed-in password changes.
+
+In the post composer, choose **Sell a download**, add a public preview, enter a
+USD price ($1–$10,000), and upload the buyer's private original/archive/project
+file. The post and published marketplace product are saved in one bulk upsert.
+The feed and post details show the price and link to the product. Editing a sale
+post preserves the product link; edit its price or private file in Creator studio.
+A normal post remains free. Listings currently use a personal-use licence.
+
+Checkout remains test-only and simulated production checkout stays disabled by
+default. A price tag is not a live payment integration or real seller payout.
+No new SQL migration or environment variables are required for these controls;
+the email callback Redirect URL above must be configured before email changes.
 
 ## Local development and tests
 

@@ -1,10 +1,12 @@
 import { createCheckout } from "@/lib/payments";
+import { changeEmail, changePassword } from "@/lib/account";
 import { beginUpload, completeUpload, signedMediaUrl } from "@/lib/media";
 import { NextResponse } from "next/server";
 import {
   all,
   get,
   put,
+  putMany,
   del,
   uid,
   authClient,
@@ -77,7 +79,7 @@ async function handleGET(
             .filter((m: any) => !m.private)
             .map((m: any) => ["/api/media/" + m.id, m.type]),
         ),
-        me: exposeUser(u),
+        me: u ? { ...exposeUser(u), email: u.email } : null,
         users,
         posts: records.post
           .filter((x: any) => !blocks.includes(x.userId))
@@ -266,13 +268,29 @@ async function handlePOST(
       return ok({ ok: true });
     }
     const u = await requireUser(req);
+    if (a === "account-password") return ok(await changePassword(u, b));
+    if (a === "account-email") return ok(await changeEmail(u, b));
     if (a === "profile") {
       const name = validateText(b.name, 60);
+      const username =
+        b.username === undefined
+          ? u.username
+          : validateText(b.username, 24).toLowerCase();
+      if (
+        !/^[a-z0-9_]{3,24}$/.test(username) ||
+        (await all("user")).some(
+          (x) => x.id !== u.id && x.username === username,
+        )
+      )
+        throw new Error(
+          "Choose a unique username with 3–24 letters, numbers or underscores.",
+        );
       return ok(
         await publicUser(
           await put("user", {
             ...u,
             name,
+            username,
             bio: String(b.bio || "").slice(0, 500),
             discipline: String(b.discipline || "").slice(0, 100),
             website: /^https?:\/\//.test(b.website)
@@ -319,28 +337,72 @@ async function handlePOST(
       }
       const caption = validateText(b.caption, 3000),
         media = Array.isArray(b.media) ? b.media.slice(0, 6) : [];
+      let previewImage = "";
       for (const m of media) {
         if (typeof m !== "string" || !m.startsWith("/api/media/"))
           throw new Error("Invalid media");
         const file = await get("media", m.split("/").pop()!);
         if (!file || file.userId !== u.id || file.private)
           throw new Error("Invalid media");
+        if (!previewImage && file.type?.startsWith("image/")) previewImage = m;
       }
       const old = b.id ? await get("post", b.id) : null;
       if (b.id && old?.userId !== u.id) return okError("Not your post", 403);
-      return ok(
-        await put("post", {
-          id: old?.id || uid(),
+      const post = {
+        id: old?.id || uid(),
+        userId: u.id,
+        title: caption.split("\n")[0].slice(0, 80),
+        caption,
+        media,
+        image: media[0] || "",
+        tags: (caption.match(/#[\w]+/g) || []).slice(0, 8),
+        likes: old?.likes || 0,
+        createdAt: old?.createdAt || Date.now(),
+        ...(old?.productId ? { productId: old.productId } : {}),
+      };
+      if (b.sale) {
+        if (old?.productId)
+          throw new Error(
+            "Edit the existing listing in Creator studio to change its price or download.",
+          );
+        if (!previewImage)
+          throw new Error("Add a public preview image for your download.");
+        const price = Number(b.sale.price);
+        if (
+          !Number.isFinite(price) ||
+          price < 1 ||
+          price > 10000 ||
+          Math.abs(price * 100 - Math.round(price * 100)) > 0.00001
+        )
+          throw new Error(
+            "Enter a price between $1 and $10,000 with at most two decimal places.",
+          );
+        const file = await get("media", String(b.sale.fileId || ""));
+        if (!file || !file.private || file.userId !== u.id)
+          throw new Error("Upload your own private downloadable file first.");
+        const product = {
+          id: uid(),
           userId: u.id,
-          title: caption.split("\n")[0].slice(0, 80),
-          caption,
-          media,
-          image: media[0] || "",
-          tags: (caption.match(/#[\w]+/g) || []).slice(0, 8),
-          likes: 0,
-          createdAt: old?.createdAt || Date.now(),
-        }),
-      );
+          title: post.title,
+          description: caption,
+          price,
+          fileId: file.id,
+          image: previewImage,
+          category: "Digital art",
+          format: file.name?.split(".").pop()?.toUpperCase() || "Download",
+          software: "See included documentation",
+          licence: "Personal use. No redistribution or resale.",
+          status: "published",
+          createdAt: Date.now(),
+        };
+        const salePost = { ...post, productId: product.id };
+        await putMany([
+          { kind: "product", value: product },
+          { kind: "post", value: salePost },
+        ]);
+        return ok(salePost);
+      }
+      return ok(await put("post", post));
     }
     if (a === "comment") {
       const p = await get("post", b.target);

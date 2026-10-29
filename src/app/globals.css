@@ -3155,3 +3155,16 @@ h1 + .heading-spark {
     gap: 24px;
   }
 }
+
+/* Account security and sale-post composer */
+.account-settings { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line, #e5e2e9); }
+.account-settings h3 { margin: 0 0 8px; }
+.account-settings form { margin-top: 22px; }
+.account-settings h4 { margin-bottom: 12px; }
+.account-notice { padding: 14px; border-radius: 12px; background: rgba(91, 136, 110, .12); line-height: 1.5; }
+.composer-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.composer-modes button { padding: 12px 8px; border: 1px solid #d9d4e2; border-radius: 12px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.composer-modes button.active { background: #e6ddf5; color: #35224d; border-color: #b9a5d7; }
+.composer-modes button:focus-visible { outline: 2px solid #8665b1; outline-offset: 3px; }
+.sale-fields { margin-top: 18px; }
+.sale-link { margin: 8px 0 16px; }

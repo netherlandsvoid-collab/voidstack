@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import { uploadDirect } from "@/lib/direct-upload";
+import AccountSettings from "@/components/AccountSettings";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -148,6 +149,10 @@ export default function App() {
     [preview, setPreview] = useState(""),
     [messageText, setMessageText] = useState(""),
     [messageImage, setMessageImage] = useState("");
+  const [sellDownload, setSellDownload] = useState(false);
+  const productsById = new Map<string, Item>(
+    (data.products as Item[]).map((p) => [p.id, p]),
+  );
   const formRef = useRef<HTMLFormElement>(null),
     toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const me = data.me,
@@ -179,6 +184,10 @@ export default function App() {
       setModal("post");
     }
     if (initial.get("purchases")) setPage("downloads");
+    if (initial.get("account") === "email-confirmed") {
+      tell("Email confirmation complete. Your account details will refresh.");
+      history.replaceState(null, "", "/");
+    }
     if (initial.get("checkout"))
       tell("Checkout cancelled. No purchase was made.");
     if (initial.get("profile")) {
@@ -267,6 +276,7 @@ export default function App() {
     setMedia(item?.media || []);
     setPreview(item?.image || "");
     setFileId("");
+    setSellDownload(false);
   }
   function go(id: string) {
     setPage(id);
@@ -343,10 +353,19 @@ export default function App() {
         await refresh();
         if (authMode === "register") setTimeout(() => open("settings"), 100);
       } else if (modal === "create") {
-        await api("post", { ...b, media, id: selected?.id });
+        await api("post", {
+          ...b,
+          media,
+          id: selected?.id,
+          ...(sellDownload ? { sale: { price: b.price, fileId } } : {}),
+        });
         setModal("");
         await refresh();
-        tell("Your work is out in the world.");
+        tell(
+          sellDownload
+            ? "Your post and download listing are published."
+            : "Your work is out in the world.",
+        );
       } else if (modal === "listing") {
         await api("product", {
           ...b,
@@ -486,6 +505,7 @@ export default function App() {
     );
   }
   function postCard(p: Item) {
+    const sale = productsById.get(p.productId);
     const author = user(p.userId),
       liked = data.likes.includes(p.id),
       saved = data.saved.includes(p.id);
@@ -543,6 +563,14 @@ export default function App() {
             {p.title}
           </button>
           <p className="post-caption">{p.caption}</p>
+          {sale?.status === "published" && (
+            <button
+              className="button secondary sale-link"
+              onClick={() => open("product", sale)}
+            >
+              <ShoppingBag size={16} /> View download · ${sale.price} USD
+            </button>
+          )}
           <div className="post-bottom">
             <div>
               <button
@@ -947,6 +975,7 @@ export default function App() {
                     {[
                       "For you",
                       "Templates",
+                      "Digital art",
                       "3D assets",
                       "Photography",
                       "Illustration",
@@ -1939,8 +1968,7 @@ export default function App() {
                   </button>
                 )}
                 <p className="fine-print">
-                  Local development accounts · Email verification and recovery
-                  require an email provider.
+                  Use an email address you can access to confirm your account.
                 </p>
               </>
             )}
@@ -1953,6 +1981,36 @@ export default function App() {
                     : "Share a little of your world."}
                 </h2>
                 <form onSubmit={submit}>
+                  {!selected?.productId && (
+                    <div
+                      className="composer-modes"
+                      role="group"
+                      aria-label="Post type"
+                    >
+                      <button
+                        type="button"
+                        className={!sellDownload ? "active" : ""}
+                        aria-pressed={!sellDownload}
+                        onClick={() => setSellDownload(false)}
+                      >
+                        Share a post
+                      </button>
+                      <button
+                        type="button"
+                        className={sellDownload ? "active" : ""}
+                        aria-pressed={sellDownload}
+                        onClick={() => setSellDownload(true)}
+                      >
+                        Sell a download
+                      </button>
+                    </div>
+                  )}
+                  {selected?.productId && (
+                    <p className="fine-print">
+                      This post has a download listing. Change its price or file
+                      in Creator studio.
+                    </p>
+                  )}
                   <label>
                     Your story
                     <textarea
@@ -2002,6 +2060,49 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                  {sellDownload && (
+                    <div className="sale-fields">
+                      <label>
+                        Price (USD)
+                        <input
+                          name="price"
+                          type="number"
+                          min="1"
+                          max="10000"
+                          step="0.01"
+                          required
+                          placeholder="19.00"
+                        />
+                      </label>
+                      <label className="upload-zone compact">
+                        <Upload size={23} />
+                        <strong>
+                          {fileId
+                            ? "Private download uploaded ✓"
+                            : "Upload the buyer’s download"}
+                        </strong>
+                        <span>
+                          Original artwork, Artwork, ZIP, PDF or project file ·
+                          10 MB maximum
+                        </span>
+                        <input
+                          type="file"
+                          hidden
+                          accept=".jpg,.jpeg,.png,.webp,.gif,.zip,.pdf,.fig,.blend,.psd,.ai,.aep"
+                          onChange={(e) => handleUpload(e.target.files, "file")}
+                        />
+                      </label>
+                      <p className="fine-print">
+                        Post images are public previews. The separate download
+                        is delivered after purchase. Personal use; no
+                        redistribution or resale.
+                      </p>
+                      <p className="fine-print">
+                        Checkout is currently in test mode. No real money is
+                        collected.
+                      </p>
+                    </div>
+                  )}
                   {error && (
                     <div className="error-box" role="alert">
                       {error}
@@ -2012,7 +2113,9 @@ export default function App() {
                       ? "Working..."
                       : selected
                         ? "Save changes"
-                        : "Publish your work"}
+                        : sellDownload
+                          ? "Publish post & listing"
+                          : "Publish your work"}
                     <ArrowUpRight size={17} />
                   </button>
                 </form>
@@ -2061,6 +2164,21 @@ export default function App() {
                     </label>
                   </div>
                   <label>
+                    Username
+                    <input
+                      name="username"
+                      required
+                      minLength={3}
+                      maxLength={24}
+                      pattern="[a-zA-Z0-9_]{3,24}"
+                      defaultValue={me?.username}
+                      autoComplete="username"
+                    />
+                    <span className="fine-print">
+                      3–24 letters, numbers or underscores.
+                    </span>
+                  </label>
+                  <label>
                     A little about you
                     <textarea
                       name="bio"
@@ -2084,6 +2202,11 @@ export default function App() {
                     Save profile <Check size={17} />
                   </button>
                 </form>
+                <AccountSettings
+                  email={me?.email || ""}
+                  api={api}
+                  onUpdated={refresh}
+                />
                 <div className="settings-links">
                   <button
                     onClick={() => {
@@ -2155,6 +2278,21 @@ export default function App() {
                     </button>
                     <h2>{currentPost.title}</h2>
                     <p>{currentPost.caption}</p>
+                    {productsById.get(currentPost.productId)?.status ===
+                      "published" && (
+                      <button
+                        className="button primary sale-link"
+                        onClick={() =>
+                          open(
+                            "product",
+                            productsById.get(currentPost.productId)!,
+                          )
+                        }
+                      >
+                        <ShoppingBag size={17} /> View download · $
+                        {productsById.get(currentPost.productId)!.price} USD
+                      </button>
+                    )}
                     <div className="detail-actions">
                       <button
                         className={`button secondary ${data.likes.includes(currentPost.id) ? "liked" : ""}`}
@@ -2581,6 +2719,7 @@ export default function App() {
                       >
                         {[
                           "Templates",
+                          "Digital art",
                           "3D assets",
                           "Photography",
                           "Illustration",
@@ -2649,10 +2788,12 @@ export default function App() {
                           ? "Replace private file (optional)"
                           : "Private downloadable file"}
                     </strong>
-                    <span>ZIP, PDF or project file · 10 MB maximum</span>
+                    <span>
+                      Artwork, ZIP, PDF or project file · 10 MB maximum
+                    </span>
                     <input
                       type="file"
-                      accept=".zip,.pdf,.fig,.blend,.psd,.ai,.aep"
+                      accept=".jpg,.jpeg,.png,.webp,.gif,.zip,.pdf,.fig,.blend,.psd,.ai,.aep"
                       hidden
                       onChange={(e) => handleUpload(e.target.files, "file")}
                     />
@@ -2737,10 +2878,11 @@ export default function App() {
                         studio is where your digital storefront begins.
                       </p>
                       <p>
-                        Settings contains your profile editor, purchases, and
-                        sign-out. Payments are currently simulated. Email
-                        recovery is unavailable until a mail provider is
-                        configured.
+                        Settings contains your profile, username, email,
+                        password, purchases, and sign-out. To sell a file,
+                        choose Sell a download when creating a post. Checkout is
+                        test-only; no real money is collected.
+                        Forgotten-password recovery is not implemented yet.
                       </p>
                     </>
                   )}
