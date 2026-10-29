@@ -96,6 +96,18 @@ export async function put(kind: string, value: any): Promise<any> {
   events.emit("change");
   return value;
 }
+// PostgREST sends a bulk upsert as one SQL statement: a sale listing and its
+// linked post are committed together instead of leaving half-published data.
+export async function putMany(entries: { kind: string; value: any }[]) {
+  const { error } = await database()
+    .from("voidstack_records")
+    .upsert(
+      entries.map(({ kind, value }) => ({ kind, id: value.id, data: value })),
+      { onConflict: "kind,id" },
+    );
+  if (error) databaseError(error);
+  events.emit("change");
+}
 export async function del(kind: string, id: string) {
   const { error } = await database()
     .from("voidstack_records")

@@ -8,6 +8,12 @@ export function installSupabaseFixture() {
   const storageObjects = new Map<string, { bytes: Buffer; type: string }>();
   const uploadTokens = new Map<string, string>();
   let bucketExists = true;
+  let failBulk = false;
+  const emailRequests: {
+    oldEmail: string;
+    newEmail: string;
+    redirectTo: string;
+  }[] = [];
   let confirmationRequired = false;
   let unavailable = false;
   let counter = 0;
@@ -124,7 +130,14 @@ export function installSupabaseFixture() {
       const kind = url.searchParams.get("kind")?.replace(/^eq\./, "");
       const id = url.searchParams.get("id")?.replace(/^eq\./, "");
       if (method === "POST") {
-        records.set(body.kind + ":" + body.id, body);
+        if (Array.isArray(body)) {
+          if (failBulk)
+            return json(
+              { code: "XX000", message: "Simulated transaction failure" },
+              400,
+            );
+          for (const row of body) records.set(row.kind + ":" + row.id, row);
+        } else records.set(body.kind + ":" + body.id, body);
         return new Response(null, { status: 201 });
       }
       if (method === "DELETE") {
@@ -161,6 +174,21 @@ export function installSupabaseFixture() {
     }
     if (url.pathname.endsWith("/token")) {
       let u;
+      if (url.searchParams.get("grant_type") === "pkce") {
+        u = [...accounts.values()].find((u) => u.new_email);
+        if (
+          body.auth_code !== "email-change-valid" ||
+          !u ||
+          !body.code_verifier
+        )
+          return json({ message: "Invalid authorization code" }, 400);
+        accounts.delete(u.email);
+        u.email = u.new_email;
+        delete u.new_email;
+        accounts.set(u.email, u);
+        const { password, confirmed, ...safe } = u;
+        return json(token(safe));
+      }
       if (url.searchParams.get("grant_type") === "refresh_token")
         u = [...accounts.values()].find(
           (u) => "refresh_" + u.id === body.refresh_token,
@@ -197,7 +225,22 @@ export function installSupabaseFixture() {
         : "";
       const u = [...accounts.values()].find((u) => u.id === sub);
       if (!u) return json({ message: "Invalid token" }, 401);
-      const { password, ...safe } = u;
+      if (method === "PUT") {
+        if (body.password) {
+          if (body.current_password !== u.password)
+            return json({ message: "Current password is incorrect" }, 400);
+          u.password = body.password;
+        }
+        if (body.email) {
+          u.new_email = body.email;
+          emailRequests.push({
+            oldEmail: u.email,
+            newEmail: body.email,
+            redirectTo: url.searchParams.get("redirect_to") || "",
+          });
+        }
+      }
+      const { password, confirmed, ...safe } = u;
       return json(safe);
     }
     if (url.pathname.endsWith("/logout"))
@@ -208,6 +251,10 @@ export function installSupabaseFixture() {
     records,
     accounts,
     storageObjects,
+    emailRequests,
+    setFailBulk: (value: boolean) => {
+      failBulk = value;
+    },
     setBucketExists: (value: boolean) => {
       bucketExists = value;
     },
