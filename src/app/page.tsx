@@ -3,6 +3,10 @@ import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import { uploadDirect } from "@/lib/direct-upload";
 import ProductFilePicker from "@/components/ProductFilePicker";
+import SellerPaymentSettings from "@/components/SellerPaymentSettings";
+import DirectCheckout from "@/components/DirectCheckout";
+import SellerOrderReview from "@/components/SellerOrderReview";
+import { currencies, money, orderStatus } from "@/lib/payment-methods";
 import AccountSettings from "@/components/AccountSettings";
 import {
   Asterisk,
@@ -143,7 +147,7 @@ export default function App() {
     [dark, setDark] = useState(false),
     [mobileNav, setMobileNav] = useState(false),
     [limit, setLimit] = useState(6),
-    [price, setPrice] = useState("all"),
+    [currencyFilter, setCurrencyFilter] = useState("all"),
     [sort, setSort] = useState("recent"),
     [authMode, setAuthMode] = useState("register"),
     [media, setMedia] = useState<string[]>([]),
@@ -372,7 +376,9 @@ export default function App() {
           ...b,
           media,
           id: selected?.id,
-          ...(sellDownload ? { sale: { price: b.price, fileId } } : {}),
+          ...(sellDownload
+            ? { sale: { price: b.price, currency: b.currency, fileId } }
+            : {}),
         });
         setModal("");
         await refresh();
@@ -437,14 +443,24 @@ export default function App() {
         `${p.title} ${p.category}`
           .toLowerCase()
           .includes(query.toLowerCase())) &&
-      (price === "all" || p.price <= Number(price)),
+      (currencyFilter === "all" || (p.currency || "USD") === currencyFilter),
   );
   if (category !== "For you" && page === "marketplace")
     products = products.filter((p: Item) =>
       p.category.toLowerCase().includes(category.toLowerCase()),
     );
-  if (sort === "low") products.sort((a: Item, b: Item) => a.price - b.price);
-  if (sort === "high") products.sort((a: Item, b: Item) => b.price - a.price);
+  if (sort === "low")
+    products.sort(
+      (a: Item, b: Item) =>
+        (a.currency || "USD").localeCompare(b.currency || "USD") ||
+        a.price - b.price,
+    );
+  if (sort === "high")
+    products.sort(
+      (a: Item, b: Item) =>
+        (a.currency || "USD").localeCompare(b.currency || "USD") ||
+        b.price - a.price,
+    );
   const currentPost = selected
     ? data.posts.find((p: Item) => p.id === selected.id)
     : null;
@@ -506,7 +522,7 @@ export default function App() {
               {user(p.userId)?.name} <span>· {p.format}</span>
             </p>
           </div>
-          <strong>${p.price}</strong>
+          <strong>{money(p.price, p.currency)}</strong>
         </div>
         {page === "seller" && (
           <div className="seller-actions">
@@ -604,9 +620,7 @@ export default function App() {
                 </span>
               </button>
               <div className="download-cta">
-                <strong>
-                  ${Number(sale.price).toFixed(2)} <small>USD</small>
-                </strong>
+                <strong>{money(sale.price, sale.currency)}</strong>
                 <button
                   className="button primary sale-link"
                   onClick={() => open("product", sale)}
@@ -940,9 +954,7 @@ export default function App() {
                                     {product.format || product.category}
                                   </small>
                                 </span>
-                                <b>
-                                  ${product.price} <small>USD</small>
-                                </b>
+                                <b>{money(product.price, product.currency)}</b>
                                 <ChevronRight size={20} />
                               </button>
                             ))}
@@ -1128,13 +1140,16 @@ export default function App() {
                   </div>
                   <div className="selects">
                     <select
-                      aria-label="Filter by price"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      aria-label="Filter by currency"
+                      value={currencyFilter}
+                      onChange={(e) => setCurrencyFilter(e.target.value)}
                     >
-                      <option value="all">Any price</option>
-                      <option value="20">Under $20</option>
-                      <option value="40">Under $40</option>
+                      <option value="all">All currencies</option>
+                      {currencies.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
                     <select
                       aria-label="Sort products"
@@ -1142,8 +1157,12 @@ export default function App() {
                       onChange={(e) => setSort(e.target.value)}
                     >
                       <option value="recent">Recommended</option>
-                      <option value="low">Price: low to high</option>
-                      <option value="high">Price: high to low</option>
+                      <option value="low">
+                        Currency, then price: low to high
+                      </option>
+                      <option value="high">
+                        Currency, then price: high to low
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -1151,11 +1170,11 @@ export default function App() {
                 {!products.length &&
                   empty(
                     "Nothing here just yet.",
-                    "Try another category or price range.",
+                    "Try another category or currency.",
                   )}
                 <div className="development-notice">
-                  <ShieldCheck size={17} /> Development marketplace · Test
-                  purchases only. No money is charged.
+                  <ShieldCheck size={17} /> Pay creators directly. Downloads
+                  unlock after the seller confirms your payment.
                 </div>
               </>
             )}
@@ -1582,15 +1601,16 @@ export default function App() {
                   <>
                     <div className="stats-grid">
                       <div>
-                        <span>Completed test sales</span>
+                        <span>Confirmed direct sales</span>
                         <strong>
-                          $
-                          {data.sellerOrders
-                            .filter((o: Item) => o.status === "paid")
-                            .reduce((s: number, o: Item) => s + o.amount, 0)
-                            .toFixed(2)}
+                          {
+                            data.sellerOrders.filter(
+                              (o: Item) =>
+                                o.status === "paid" && o.mode === "direct",
+                            ).length
+                          }
                         </strong>
-                        <small>Test transactions · No real earnings</small>
+                        <small>Payments confirmed by you</small>
                       </div>
                       <div>
                         <span>Orders</span>
@@ -1610,6 +1630,12 @@ export default function App() {
                         </small>
                       </div>
                     </div>
+                    <button
+                      className="button secondary"
+                      onClick={() => open("settings")}
+                    >
+                      Set up payment details
+                    </button>
                     <h2 className="section-heading">Your collection</h2>
                     <div className="product-grid">
                       {products.map(productCard)}
@@ -1625,17 +1651,13 @@ export default function App() {
                     {data.sellerOrders.length ? (
                       <div className="orders-list">
                         {data.sellerOrders.map((o: Item) => (
-                          <div key={o.id}>
-                            <span>
-                              <strong>{o.title}</strong>
-                              <small>
-                                {new Date(o.createdAt).toLocaleDateString()} ·
-                                Development purchase
-                              </small>
-                            </span>
-                            <b>${o.amount}</b>
-                            <span className="status">{o.status}</span>
-                          </div>
+                          <SellerOrderReview
+                            key={o.id + (o.revision || o.status)}
+                            order={o}
+                            buyerName={user(o.userId)?.name || "Buyer"}
+                            api={api}
+                            onUpdated={refresh}
+                          />
                         ))}
                       </div>
                     ) : (
@@ -1661,18 +1683,21 @@ export default function App() {
                         <span>
                           <strong>{o.title}</strong>
                           <small>
-                            {new Date(o.createdAt).toLocaleDateString()} · $
-                            {o.amount} ·{" "}
-                            {o.mode === "development"
-                              ? "Development"
-                              : "Stripe test"}{" "}
-                            purchase · {o.status}
+                            {new Date(o.createdAt).toLocaleDateString()} ·{" "}
+                            {money(o.amount, o.currency)} ·{" "}
+                            {o.mode === "direct"
+                              ? orderStatus(o.status)
+                              : `${o.mode} · ${o.status}`}
                           </small>
                         </span>
                         <button
                           className="button secondary"
-                          disabled={o.status !== "paid"}
+                          disabled={o.mode !== "direct" && o.status !== "paid"}
                           onClick={async () => {
+                            if (o.status !== "paid") {
+                              open("direct-order", o);
+                              return;
+                            }
                             const r = await action("download-link", {
                               orderId: o.id,
                             });
@@ -1682,7 +1707,7 @@ export default function App() {
                           <Download size={16} />{" "}
                           {o.status === "paid"
                             ? "Download"
-                            : "Awaiting payment"}
+                            : "View payment & status"}
                         </button>
                       </div>
                     ))}
@@ -2063,17 +2088,29 @@ export default function App() {
                   {sellDownload && (
                     <div className="sale-fields">
                       <label>
-                        Price (USD)
+                        Price
                         <input
                           name="price"
                           type="number"
                           min="1"
-                          max="10000"
+                          max="10000000"
                           step="0.01"
                           required
                           placeholder="19.00"
                         />
                       </label>
+                      <label>
+                        Currency
+                        <select name="currency" defaultValue="USD">
+                          {currencies.map((c) => (
+                            <option key={c}>{c}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="fine-print">
+                        Use the same currency as one of your saved payment
+                        options. No automatic currency conversion.
+                      </p>
                       <ProductFilePicker
                         api={api}
                         onUploaded={(file) => setFileId(file?.id || "")}
@@ -2199,6 +2236,12 @@ export default function App() {
                   api={api}
                   onUpdated={refresh}
                 />
+                <SellerPaymentSettings
+                  key={me?.id}
+                  initial={data.sellerPaymentMethods || []}
+                  api={api}
+                  onUpdated={refresh}
+                />
                 <div className="settings-links">
                   <button
                     onClick={() => {
@@ -2281,8 +2324,11 @@ export default function App() {
                           )
                         }
                       >
-                        <ShoppingBag size={17} /> View download · $
-                        {productsById.get(currentPost.productId)!.price} USD
+                        <ShoppingBag size={17} /> View download ·{" "}
+                        {money(
+                          productsById.get(currentPost.productId)!.price,
+                          productsById.get(currentPost.productId)!.currency,
+                        )}
                       </button>
                     )}
                     <div className="detail-actions">
@@ -2541,7 +2587,7 @@ export default function App() {
                   </div>
                   <div className="purchase-price">
                     <strong>
-                      ${selected.price}
+                      {money(selected.price, selected.currency)}
                       <small> USD</small>
                     </strong>
                     <span>One-time purchase</span>
@@ -2555,110 +2601,42 @@ export default function App() {
                     Get this resource <ArrowRight size={17} />
                   </button>
                   <p className="fine-print">
-                    {data.developmentCheckout
-                      ? "Development checkout · No real charge"
-                      : "Stripe test checkout · No real charge"}
+                    Pay the seller directly · Seller confirms receipt
                     {selected.seed ? " · Sample file only" : ""}
                   </p>
                 </div>
               </>
             )}
-            {modal === "checkout" && selected && (
-              <>
-                <div className="eyebrow">A NEW TOOL FOR YOUR TOOLKIT</div>
-                <h2>Make something wonderful.</h2>
-                <div className="checkout-item">
-                  {selected.image && (
-                    <img src={selected.image} alt={selected.title} />
-                  )}
-                  <div>
-                    <strong>{selected.title}</strong>
-                    <small>By {user(selected.userId)?.name}</small>
-                  </div>
-                  <b>${selected.price}</b>
-                </div>
-                <div className="development-notice">
-                  <ShieldCheck size={22} />
-                  <div>
-                    <strong>
-                      {data.developmentCheckout
-                        ? "Development checkout"
-                        : "Stripe test checkout"}
-                    </strong>
-                    <p>
-                      {data.developmentCheckout
-                        ? "This is a simulated purchase. No card details are collected and no money is charged."
-                        : "Continue to Stripe’s hosted test checkout. Download access is granted after a verified payment webhook."}
-                      {selected.seed
-                        ? " This seeded resource delivers a demonstration text file."
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  disabled={busy}
-                  className="button primary full"
-                  onClick={async () => {
-                    setBusy(true);
-                    const r = await action("checkout", {
-                      productId: selected.id,
-                    });
-                    setBusy(false);
-                    if (r?.url) {
-                      location.assign(r.url);
-                    } else if (r) {
-                      setModal("purchase-success");
-                      setSelected(r);
-                    }
-                  }}
-                >
-                  {busy
-                    ? "Processing..."
-                    : data.developmentCheckout
-                      ? "Complete test purchase"
-                      : "Continue to Stripe test checkout"}{" "}
-                  <ArrowRight size={17} />
-                </button>
-              </>
-            )}
-            {modal === "purchase-success" && selected && (
-              <>
-                <div className="success-icon">
-                  <Check size={30} />
-                </div>
-                <h2>Your next idea starts here.</h2>
-                <p className="muted">
-                  Your development purchase is complete. Your file is ready
-                  whenever you are.
-                </p>
-                <div className="checkout-item">
-                  <FileText size={28} />
-                  <strong>{selected.title}</strong>
-                </div>
-                <button
-                  className="button primary full"
-                  onClick={async () => {
-                    const r = await action("download-link", {
-                      orderId: selected.id,
-                    });
-                    if (r) window.location.assign(r.url);
-                  }}
-                >
-                  <Download size={18} /> Download your file
-                </button>
-                <button
-                  className="button secondary full"
-                  onClick={() => {
-                    setModal("");
-                    go("downloads");
-                  }}
-                >
-                  View all purchases
-                </button>
-                <p className="fine-print">
-                  Simulated payment · No money was charged.
-                </p>
-              </>
+            {["checkout", "direct-order"].includes(modal) && selected && (
+              <DirectCheckout
+                key={modal + selected.id}
+                product={
+                  modal === "checkout"
+                    ? selected
+                    : {
+                        id: selected.productId,
+                        title: selected.title,
+                        price: selected.amount,
+                        currency: selected.currency,
+                      }
+                }
+                existingOrder={
+                  modal === "direct-order"
+                    ? data.orders.find((o: Item) => o.id === selected.id) ||
+                      selected
+                    : data.orders.find(
+                        (o: Item) =>
+                          o.productId === selected.id &&
+                          (o.mode === "direct" || o.status === "paid"),
+                      )
+                }
+                api={api}
+                onUpdated={refresh}
+                onOrders={() => {
+                  setModal("");
+                  go("downloads");
+                }}
+              />
             )}
             {modal === "listing" && (
               <>
@@ -2692,13 +2670,13 @@ export default function App() {
                   </label>
                   <div className="form-grid">
                     <label>
-                      Price (USD)
+                      Price
                       <input
                         name="price"
                         required
                         type="number"
                         min="1"
-                        max="10000"
+                        max="10000000"
                         step="0.01"
                         defaultValue={selected?.price || 19}
                       />
@@ -2723,6 +2701,21 @@ export default function App() {
                       </select>
                     </label>
                   </div>
+                  <label>
+                    Currency
+                    <select
+                      name="currency"
+                      defaultValue={selected?.currency || "USD"}
+                    >
+                      {currencies.map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="fine-print">
+                    Buyers can use payment options matching this currency. No
+                    automatic conversion.
+                  </p>
                   <div className="form-grid">
                     <label>
                       File formats
@@ -2848,14 +2841,15 @@ export default function App() {
                     <>
                       <p>
                         This instance stores accounts, posts, conversations, and
-                        orders in a local SQLite database. Passwords are salted
-                        and hashed; sessions use HTTP-only cookies.
+                        orders in Supabase. Supabase Auth manages passwords;
+                        sessions use HTTP-only cookies.
                       </p>
                       <p>
                         Messages are available only to their participants.
                         Product downloads require a purchase and a short-lived
                         authorised link. Never upload sensitive personal
-                        documents.
+                        documents. Seller payment details are shared with
+                        signed-in buyers at checkout and saved in their orders.
                       </p>
                     </>
                   ) : (
@@ -2869,9 +2863,10 @@ export default function App() {
                         Settings contains your profile, username, email,
                         password, purchases, and sign-out. To sell a file,
                         choose Sell a download when creating a post. Checkout is
-                        test-only; no real money is collected. Forgot your
-                        password? Use the reset link on the sign-in screen to
-                        receive an email.
+                        direct to the seller. Set up payment details in
+                        Settings, then confirm received payments in Creator
+                        studio. Forgot your password? Use the reset link on the
+                        sign-in screen to receive an email.
                       </p>
                     </>
                   )}

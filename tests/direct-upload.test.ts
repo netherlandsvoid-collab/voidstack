@@ -251,13 +251,50 @@ test("paid product files redirect directly to storage after order and session ch
   );
   assert.equal(listing.status, 200, await listing.clone().text());
   const product = await listing.json();
+  const settings = await (
+    await request(
+      "seller-payment",
+      {
+        methods: [
+          { kind: "paypal", email: "seller@example.com", currency: "USD" },
+        ],
+      },
+      seller.cookie,
+    )
+  ).json();
   const checkout = await request(
     "checkout",
-    { productId: product.id },
+    { productId: product.id, methodId: settings.methods[0].id },
     buyer.cookie,
   );
   assert.equal(checkout.status, 200);
-  const order = await checkout.json();
+  let order = await checkout.json();
+  order = await (
+    await request(
+      "direct-order",
+      {
+        orderId: order.id,
+        revision: order.revision,
+        action: "sent",
+        reference: "transfer-001",
+        payerName: "Buyer",
+      },
+      buyer.cookie,
+    )
+  ).json();
+  order = await (
+    await request(
+      "direct-order",
+      {
+        orderId: order.id,
+        revision: order.revision,
+        action: "confirm",
+        received: true,
+      },
+      seller.cookie,
+    )
+  ).json();
+  assert.equal(order.status, "paid");
   const link = await (
     await request("download-link", { orderId: order.id }, buyer.cookie)
   ).json();

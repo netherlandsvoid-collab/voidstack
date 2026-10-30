@@ -1,5 +1,13 @@
 import { requestPasswordReset, resetForgottenPassword } from "@/lib/recovery";
-import { createCheckout } from "@/lib/payments";
+import {
+  savePaymentMethods,
+  checkoutOptions,
+  startDirectOrder,
+  updateDirectOrder,
+  publicOrder,
+  currencyCode,
+  listingPrice,
+} from "@/lib/direct-payments";
 import { changeEmail, changePassword } from "@/lib/account";
 import {
   beginUpload,
@@ -132,20 +140,27 @@ async function handleGET(
         notifications: u
           ? records.notification.filter((x: any) => x.userId === u.id)
           : [],
-        orders: u ? records.order.filter((x: any) => x.userId === u.id) : [],
+        sellerPaymentMethods: u
+          ? (await get("seller-payment", u.id))?.methods || []
+          : [],
+        orders: u
+          ? records.order.filter((x: any) => x.userId === u.id).map(publicOrder)
+          : [],
         sellerOrders: u
-          ? records.order.filter(
-              (x: any) =>
-                records.product.find((p: any) => p.id === x.productId)
-                  ?.userId === u.id,
-            )
+          ? records.order
+              .filter(
+                (x: any) =>
+                  (x.sellerId ||
+                    records.product.find((p: any) => p.id === x.productId)
+                      ?.userId) === u.id,
+              )
+              .map(publicOrder)
           : [],
         messages: u
           ? records.message.filter((x: any) => x.from === u.id || x.to === u.id)
           : [],
         reports: u?.role === "admin" ? records.report : [],
         adminUsers: u?.role === "admin" ? users : [],
-        developmentCheckout: !process.env.STRIPE_SECRET_KEY,
       });
     }
     if (path[0] === "download") {
@@ -162,7 +177,10 @@ async function handleGET(
       )
         return okError("Download link expired. Request a new link.", 403);
       const p = await get("product", order.productId),
-        f = p?.fileId ? await get("media", p.fileId) : null;
+        f =
+          order.fileId || p?.fileId
+            ? await get("media", order.fileId || p.fileId)
+            : null;
       if (f?.storagePath)
         return Response.redirect(await signedMediaUrl(f, true), 307);
       if (f)
@@ -173,6 +191,11 @@ async function handleGET(
             "Cache-Control": "private, no-store",
           },
         });
+      if (order.mode === "direct")
+        return okError(
+          "Your purchased file is unavailable. Contact the seller.",
+          404,
+        );
       return new Response(
         `Nexirel development sample\n${p.title}\nThis is a demonstration file, not a commercial asset.\nOrder: ${order.id}`,
         {
@@ -282,6 +305,9 @@ async function handlePOST(
       return ok({ ok: true });
     }
     const u = await requireUser(req);
+    if (a === "seller-payment") return ok(await savePaymentMethods(u, b));
+    if (a === "checkout-options") return ok(await checkoutOptions(u, b));
+    if (a === "direct-order") return ok(await updateDirectOrder(u, b));
     if (a === "account-password") return ok(await changePassword(u, b));
     if (a === "account-email") return ok(await changeEmail(u, b));
     if (a === "profile") {
@@ -381,16 +407,8 @@ async function handlePOST(
           );
         if (!previewImage)
           throw new Error("Add a public preview image for your download.");
-        const price = Number(b.sale.price);
-        if (
-          !Number.isFinite(price) ||
-          price < 1 ||
-          price > 10000 ||
-          Math.abs(price * 100 - Math.round(price * 100)) > 0.00001
-        )
-          throw new Error(
-            "Enter a price between $1 and $10,000 with at most two decimal places.",
-          );
+        const currency = currencyCode(b.sale.currency || "USD");
+        const price = listingPrice(b.sale.price, currency);
         const file = await get("media", String(b.sale.fileId || ""));
         if (!file || !file.private || file.userId !== u.id)
           throw new Error("Upload your own private downloadable file first.");
@@ -400,6 +418,7 @@ async function handlePOST(
           title: post.title,
           description: caption,
           price,
+          currency,
           fileId: file.id,
           image: previewImage,
           category: "Digital art",
@@ -540,9 +559,8 @@ async function handlePOST(
     if (a === "product") {
       const old = b.id ? await get("product", b.id) : null;
       if (old && old.userId !== u.id) return okError("Not your listing", 403);
-      const price = Number(b.price);
-      if (!Number.isFinite(price) || price < 1 || price > 10000)
-        throw new Error("Price must be between $1 and $10,000.");
+      const currency = currencyCode(b.currency || old?.currency || "USD");
+      const price = listingPrice(b.price, currency);
       const f = await get("media", b.fileId || old?.fileId);
       if (!f || !f.private || f.userId !== u.id)
         throw new Error("Upload a private product file first.");
@@ -559,6 +577,7 @@ async function handlePOST(
           title: validateText(b.title, 100),
           description: validateText(b.description, 5000),
           price,
+          currency,
           category: b.category || "Templates",
           format: String(b.format || "ZIP").slice(0, 100),
           software: String(b.software || "See documentation").slice(0, 200),
@@ -574,45 +593,7 @@ async function handlePOST(
         }),
       );
     }
-    if (a === "checkout") {
-      if (
-        !process.env.STRIPE_SECRET_KEY &&
-        process.env.NODE_ENV === "production" &&
-        process.env.ENABLE_DEV_CHECKOUT !== "true"
-      )
-        return okError(
-          "Development checkout is disabled. Configure a payment provider before accepting orders.",
-          503,
-        );
-      const p = await get("product", b.productId);
-      if (!p || p.status !== "published")
-        throw new Error("Product unavailable.");
-      if (p.userId === u.id)
-        throw new Error("You cannot purchase your own product.");
-      const prior = (await all("order")).find(
-        (x) => x.userId === u.id && x.productId === p.id && x.status === "paid",
-      );
-      if (prior) return ok(prior);
-      if (process.env.STRIPE_SECRET_KEY) return ok(await createCheckout(u, p));
-      const order = await put("order", {
-        id: uid(),
-        userId: u.id,
-        productId: p.id,
-        title: p.title,
-        amount: p.price,
-        status: "paid",
-        mode: "development",
-        createdAt: Date.now(),
-      });
-      await notify(p.userId, u.id, "made a development purchase", `seller`);
-      await notify(
-        u.id,
-        p.userId,
-        "Your development download is ready",
-        "downloads",
-      );
-      return ok(order);
-    }
+    if (a === "checkout") return ok(await startDirectOrder(u, b));
     if (a === "download-link") {
       const order = await get("order", b.orderId);
       if (!order || order.userId !== u.id || order.status !== "paid")
