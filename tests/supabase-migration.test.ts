@@ -88,3 +88,34 @@ test("media migration creates an idempotent private 10 MB bucket", async () => {
     await db.close();
   }
 });
+
+test("product bucket is private and reruns preserve an upgraded size limit", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(
+      "create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);",
+    );
+    const sql = readFileSync(
+      new URL(
+        "../supabase/migrations/004_product_storage.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await db.exec(sql);
+    const first = (await db.query<any>("select * from storage.buckets"))
+      .rows[0];
+    assert.equal(first.public, false);
+    assert.equal(Number(first.file_size_limit), 52428800);
+    await db.exec(
+      "update storage.buckets set file_size_limit=5368709120,public=true;",
+    );
+    await db.exec(sql);
+    const updated = (await db.query<any>("select * from storage.buckets"))
+      .rows[0];
+    assert.equal(updated.public, false);
+    assert.equal(Number(updated.file_size_limit), 5368709120);
+  } finally {
+    await db.close();
+  }
+});

@@ -14,6 +14,19 @@ export function installSupabaseFixture() {
   }[] = [];
   const recoveryTokens = new Map<string, string>();
   let recoveryFailure = 0;
+  const tusUploads = new Map<
+    string,
+    {
+      bucket: string;
+      path: string;
+      type: string;
+      size: number;
+      chunks: Buffer[];
+      offset: number;
+    }
+  >();
+  const tusRequests: { method: string; offset: number; size: number }[] = [];
+  let failNextPatch = false;
   let bucketExists = true;
   let failBulk = false;
   const emailRequests: {
@@ -58,7 +71,12 @@ export function installSupabaseFixture() {
           ? input.href
           : input.url,
     );
-    if (url.origin !== "https://fixture.supabase.co")
+    if (
+      ![
+        "https://fixture.supabase.co",
+        "https://fixture.storage.supabase.co",
+      ].includes(url.origin)
+    )
       throw new Error(
         "Unexpected network request in isolated test: " + url.origin,
       );
@@ -76,31 +94,116 @@ export function installSupabaseFixture() {
           },
           400,
         );
+      if (url.pathname.startsWith("/storage/v1/upload/resumable")) {
+        const headers = new Headers(init?.headers);
+        if (headers.get("apikey") !== "sb_publishable_fixture")
+          return json({ message: "Invalid API key" }, 403);
+        let id = url.pathname.split("/")[5];
+        if (method === "POST") {
+          const metadata = Object.fromEntries(
+            (headers.get("upload-metadata") || "").split(",").map((part) => {
+              const [k, v] = part.trim().split(" ");
+              return [k, Buffer.from(v || "", "base64").toString()];
+            }),
+          );
+          if (
+            uploadTokens.get(headers.get("x-signature") || "") !==
+            metadata.bucketName + "/" + metadata.objectName
+          )
+            return json({ message: "Invalid signature" }, 403);
+          id = "tus_" + tusUploads.size;
+          tusUploads.set(id, {
+            bucket: metadata.bucketName,
+            path: metadata.objectName,
+            type: metadata.contentType,
+            size: Number(headers.get("upload-length")),
+            chunks: [],
+            offset: 0,
+          });
+        }
+        const upload = tusUploads.get(id);
+        if (!upload) return json({ message: "Unknown upload" }, 404);
+        if (
+          uploadTokens.get(headers.get("x-signature") || "") !==
+          upload.bucket + "/" + upload.path
+        )
+          return json({ message: "Invalid signature" }, 403);
+        if (method === "HEAD") {
+          tusRequests.push({ method, offset: upload.offset, size: 0 });
+          return new Response(null, {
+            status: 200,
+            headers: {
+              "Tus-Resumable": "1.0.0",
+              "Upload-Offset": String(upload.offset),
+              "Upload-Length": String(upload.size),
+            },
+          });
+        }
+        if (method === "PATCH" && failNextPatch) {
+          failNextPatch = false;
+          return json({ message: "Temporary interruption" }, 503);
+        }
+        if (
+          method === "PATCH" &&
+          Number(headers.get("upload-offset")) !== upload.offset
+        )
+          return json({ message: "Wrong offset" }, 409);
+        const bytes = init?.body
+          ? Buffer.from(await new Response(init.body as BodyInit).arrayBuffer())
+          : Buffer.alloc(0);
+        tusRequests.push({ method, offset: upload.offset, size: bytes.length });
+        upload.chunks.push(bytes);
+        upload.offset += bytes.length;
+        if (upload.offset === upload.size)
+          storageObjects.set(upload.bucket + "/" + upload.path, {
+            bytes: Buffer.concat(upload.chunks),
+            type: upload.type,
+          });
+        return new Response(null, {
+          status: method === "POST" ? 201 : 204,
+          headers: {
+            "Tus-Resumable": "1.0.0",
+            "Upload-Offset": String(upload.offset),
+            Location:
+              "https://fixture.storage.supabase.co/storage/v1/upload/resumable/" +
+              id,
+          },
+        });
+      }
       const root = "/storage/v1/object/";
-      const upload = root + "upload/sign/voidstack-media/";
-      const signed = root + "sign/voidstack-media/";
-      const info = root + "info/voidstack-media/";
+      const bucket =
+        url.pathname.match(
+          /\/object\/(?:upload\/sign|sign|info)\/([^/]+)/,
+        )?.[1] || "voidstack-media";
+      const objectKey = (path: string) =>
+        bucket === "voidstack-media" ? path : bucket + "/" + path;
+      const upload = root + "upload/sign/" + bucket + "/";
+      const signed = root + "sign/" + bucket + "/";
+      const info = root + "info/" + bucket + "/";
       if (url.pathname.startsWith(upload)) {
         const path = url.pathname.slice(upload.length);
         if (method === "POST") {
           const token = "upload_" + path.replaceAll("/", "_");
-          uploadTokens.set(token, path);
+          uploadTokens.set(token, bucket + "/" + path);
           return json({
             url:
-              "/object/upload/sign/voidstack-media/" + path + "?token=" + token,
+              "/object/upload/sign/" + bucket + "/" + path + "?token=" + token,
           });
         }
         if (method === "PUT") {
-          if (uploadTokens.get(url.searchParams.get("token") || "") !== path)
+          if (
+            uploadTokens.get(url.searchParams.get("token") || "") !==
+            bucket + "/" + path
+          )
             return json({ message: "Invalid upload token" }, 403);
-          if (storageObjects.has(path))
+          if (storageObjects.has(objectKey(path)))
             return json({ message: "The resource already exists" }, 409);
           const form = init?.body as FormData;
           const file = [...form.values()].find(
             (v) => v instanceof Blob,
           ) as File;
           if (!file) throw new Error("Expected direct multipart file upload");
-          storageObjects.set(path, {
+          storageObjects.set(objectKey(path), {
             bytes: Buffer.from(await file.arrayBuffer()),
             type: file.type,
           });
@@ -108,7 +211,9 @@ export function installSupabaseFixture() {
         }
       }
       if (url.pathname.startsWith(info)) {
-        const object = storageObjects.get(url.pathname.slice(info.length));
+        const object = storageObjects.get(
+          objectKey(url.pathname.slice(info.length)),
+        );
         return object
           ? json({ size: object.bytes.length, content_type: object.type })
           : json({ message: "Object not found" }, 404);
@@ -118,9 +223,9 @@ export function installSupabaseFixture() {
         if (method === "POST")
           return json({
             signedURL:
-              "/object/sign/voidstack-media/" + path + "?token=read_fixture",
+              "/object/sign/" + bucket + "/" + path + "?token=read_fixture",
           });
-        const object = storageObjects.get(path);
+        const object = storageObjects.get(objectKey(path));
         if (!object) return json({ message: "Object not found" }, 404);
         if (url.searchParams.get("token") !== "read_fixture")
           return json({ message: "Invalid read token" }, 403);
@@ -291,6 +396,10 @@ export function installSupabaseFixture() {
     storageObjects,
     emailRequests,
     recoveryRequests,
+    tusRequests,
+    setFailNextPatch: () => {
+      failNextPatch = true;
+    },
     recoveryTokens,
     setRecoveryFailure: (status: number) => {
       recoveryFailure = status;

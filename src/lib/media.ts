@@ -8,6 +8,15 @@ import {
   validateText,
 } from "./server";
 
+import { formatBytes } from "./upload-limits";
+
+export const PRODUCT_BUCKET = "voidstack-products";
+export function productMaxBytes() {
+  const mb = Number(process.env.PRODUCT_MAX_UPLOAD_MB || 50);
+  if (!Number.isInteger(mb) || mb < 1 || mb > 5120)
+    throw new BackendError("PRODUCT_MAX_UPLOAD_MB must be between 1 and 5120.");
+  return mb * 1024 * 1024;
+}
 export const MEDIA_BUCKET = "voidstack-media";
 export const MAX_MEDIA_BYTES = 10 * 1024 * 1024;
 const extensions: Record<string, string> = {
@@ -25,29 +34,33 @@ const extensions: Record<string, string> = {
 function storageError(error: { message: string }): never {
   console.error("Supabase storage:", error.message);
   throw new BackendError(
-    "File storage is unavailable. Check the voidstack-media bucket setup.",
+    "File storage is unavailable. Check the upload bucket setup and file-size limits.",
   );
 }
 export async function beginUpload(user: any, body: any) {
   const name = validateText(body.name, 150);
-  const type = body.type;
+  const product = body.purpose === "product";
+  if (product && !body.private)
+    throw new Error("Product files must be private.");
+  const type =
+    product && !Object.hasOwn(extensions, body.type)
+      ? "application/octet-stream"
+      : body.type;
+  const max = product ? productMaxBytes() : MAX_MEDIA_BYTES;
+  const bucket = product ? PRODUCT_BUCKET : MEDIA_BUCKET;
   if (typeof type !== "string" || !Object.hasOwn(extensions, type))
     throw new Error(
       "Unsupported file type. Use JPG, PNG, WebP, GIF, MP4, WebM, ZIP or PDF.",
     );
-  if (
-    !Number.isSafeInteger(body.size) ||
-    body.size < 1 ||
-    body.size > MAX_MEDIA_BYTES
-  )
-    throw new Error("Files must be between 1 byte and 10 MB.");
+  if (!Number.isSafeInteger(body.size) || body.size < 1 || body.size > max)
+    throw new Error(`Files must be between 1 byte and ${formatBytes(max)}.`);
   const isPrivate = !!body.private;
   if (!isPrivate && !type.startsWith("image/") && !type.startsWith("video/"))
     throw new Error("Product files must be private.");
   const id = uid();
   const storagePath = `${user.id}/${id}.${extensions[type]}`;
   const { data, error } = await database()
-    .storage.from(MEDIA_BUCKET)
+    .storage.from(bucket)
     .createSignedUploadUrl(storagePath, { upsert: false });
   if (error) storageError(error);
   await put("media-upload", {
@@ -58,15 +71,17 @@ export async function beginUpload(user: any, body: any) {
     size: body.size,
     private: isPrivate,
     storagePath,
+    bucket,
+    maxBytes: max,
     expires: Date.now() + 2 * 60 * 60 * 1000,
   });
-  return { id, bucket: MEDIA_BUCKET, path: storagePath, token: data!.token };
+  return { id, bucket, path: storagePath, token: data!.token };
 }
 
 // Read only enough bytes to check the file signature. Never proxy the full file
 // through a Vercel function, including when storage ignores the Range header.
-async function prefix(storagePath: string): Promise<Buffer> {
-  const url = await signedMediaUrl({ storagePath });
+async function prefix(file: any): Promise<Buffer> {
+  const url = await signedMediaUrl(file);
   const response = await fetch(url, {
     headers: { Range: "bytes=0-31" },
     cache: "no-store",
@@ -123,7 +138,12 @@ export async function completeUpload(user: any, body: any) {
   if (existing) {
     if (existing.userId !== user.id)
       throw new Error("This upload belongs to another account.");
-    return { id, url: `/api/media/${id}` };
+    return {
+      id,
+      url: `/api/media/${id}`,
+      name: existing.name,
+      size: existing.size,
+    };
   }
   const pending = await get("media-upload", id);
   if (!pending || pending.userId !== user.id || pending.expires < Date.now())
@@ -131,7 +151,9 @@ export async function completeUpload(user: any, body: any) {
       "Upload expired or unavailable. Please select the file again.",
     );
   const { data, error } = await database()
-    .storage.from(MEDIA_BUCKET)
+    .storage.from(
+      pending.bucket === PRODUCT_BUCKET ? PRODUCT_BUCKET : MEDIA_BUCKET,
+    )
     .info(pending.storagePath);
   if (error) storageError(error);
   const actualSize = data?.size;
@@ -139,14 +161,17 @@ export async function completeUpload(user: any, body: any) {
     typeof actualSize !== "number" ||
     actualSize !== pending.size ||
     actualSize < 1 ||
-    actualSize > MAX_MEDIA_BYTES
+    actualSize >
+      (pending.bucket === PRODUCT_BUCKET
+        ? Math.min(pending.maxBytes, productMaxBytes())
+        : MAX_MEDIA_BYTES)
   )
     throw new Error(
       "The uploaded file size does not match. Please select the file again.",
     );
   if (data?.contentType !== pending.type)
     throw new Error("The uploaded file type does not match.");
-  validateSignature(pending.type, await prefix(pending.storagePath));
+  validateSignature(pending.type, await prefix(pending));
   await put("media", {
     id,
     userId: user.id,
@@ -155,16 +180,19 @@ export async function completeUpload(user: any, body: any) {
     size: actualSize,
     private: pending.private,
     storagePath: pending.storagePath,
+    bucket: pending.bucket === PRODUCT_BUCKET ? PRODUCT_BUCKET : MEDIA_BUCKET,
   });
   await del("media-upload", id);
-  return { id, url: `/api/media/${id}` };
+  return { id, url: `/api/media/${id}`, name: pending.name, size: actualSize };
 }
 export async function signedMediaUrl(
   file: any,
   download = false,
 ): Promise<string> {
   const { data, error } = await database()
-    .storage.from(MEDIA_BUCKET)
+    .storage.from(
+      file.bucket === PRODUCT_BUCKET ? PRODUCT_BUCKET : MEDIA_BUCKET,
+    )
     .createSignedUrl(
       file.storagePath,
       60,
