@@ -23,8 +23,9 @@ try {
       ),
     true,
   );
+  await page.getByRole("button", { name: "Create post", exact: true }).click();
   await page
-    .getByRole("button", { name: "Create post", exact: true })
+    .getByRole("button", { name: "Create an account", exact: true })
     .click();
   await page.getByLabel("Your name", { exact: true }).fill("Test Buyer");
   const suffix = Date.now();
@@ -46,9 +47,7 @@ try {
     .fill("Illustration");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
-  await page
-    .getByRole("button", { name: "Create post", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Create post", exact: true }).click();
   await page
     .getByLabel("Your story", { exact: true })
     .fill("A browser-tested creative journey. #illustration");

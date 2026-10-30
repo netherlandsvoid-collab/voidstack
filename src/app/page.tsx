@@ -151,6 +151,7 @@ export default function App() {
     [messageText, setMessageText] = useState(""),
     [messageImage, setMessageImage] = useState("");
   const [sellDownload, setSellDownload] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
   const [feedFiltersOpen, setFeedFiltersOpen] = useState(false);
   const productsById = new Map<string, Item>(
     (data.products as Item[]).map((p) => [p.id, p]),
@@ -181,6 +182,11 @@ export default function App() {
     const stream = new EventSource("/api/events");
     stream.onmessage = () => refresh();
     const initial = new URLSearchParams(location.search);
+    if (["login", "recover"].includes(initial.get("auth") || "")) {
+      open("auth");
+      setAuthMode(initial.get("auth")!);
+      history.replaceState(null, "", "/");
+    }
     if (initial.get("post")) {
       setSelected({ id: initial.get("post") });
       setModal("post");
@@ -274,6 +280,10 @@ export default function App() {
   function open(name: string, item: Item | null = null) {
     setSelected(item);
     setModal(name);
+    if (name === "auth") {
+      setAuthMode("login");
+      setAuthNotice("");
+    }
     setError("");
     setMedia(item?.media || []);
     setPreview(item?.image || "");
@@ -332,13 +342,14 @@ export default function App() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setAuthNotice("");
     setBusy(true);
     const b = Object.fromEntries(new FormData(e.currentTarget).entries());
     try {
       if (modal === "auth") {
         if (authMode === "recover") {
           const r = await api("recover", b);
-          setError(r.message);
+          setAuthNotice(r.message);
           return;
         }
         const result = await api(authMode, b);
@@ -1841,8 +1852,13 @@ export default function App() {
                     ? "Find your people. Share your perspective. Make your mark."
                     : authMode === "login"
                       ? "Your creative corner is right where you left it."
-                      : "Enter your email to check recovery availability."}
+                      : "We’ll email you a link to choose a new password."}
                 </p>
+                {authNotice && (
+                  <div className="account-notice" role="status">
+                    {authNotice}
+                  </div>
+                )}
                 <form onSubmit={submit} ref={formRef} key={authMode}>
                   {authMode === "register" && (
                     <>
@@ -1909,7 +1925,7 @@ export default function App() {
                     ) : authMode === "login" ? (
                       "Sign in"
                     ) : (
-                      "Check recovery options"
+                      "Send reset link"
                     )}
                     <ArrowRight size={16} />
                   </button>
@@ -1917,16 +1933,25 @@ export default function App() {
                 <div className="auth-switch">
                   {authMode === "register"
                     ? "Already part of the circle?"
-                    : "New to Nexirel?"}{" "}
+                    : authMode === "recover"
+                      ? "Remember your password?"
+                      : "New to Nexirel?"}{" "}
                   <button
                     onClick={() => {
                       setAuthMode(
-                        authMode === "register" ? "login" : "register",
+                        authMode === "register" || authMode === "recover"
+                          ? "login"
+                          : "register",
                       );
                       setError("");
+                      setAuthNotice("");
                     }}
                   >
-                    {authMode === "register" ? "Sign in" : "Create an account"}
+                    {authMode === "register"
+                      ? "Sign in"
+                      : authMode === "recover"
+                        ? "Back to sign in"
+                        : "Create an account"}
                   </button>
                 </div>
                 {authMode === "login" && (
@@ -1935,9 +1960,10 @@ export default function App() {
                     onClick={() => {
                       setAuthMode("recover");
                       setError("");
+                      setAuthNotice("");
                     }}
                   >
-                    Forgot your password?
+                    Forgot password?
                   </button>
                 )}
                 <p className="fine-print">
@@ -2858,8 +2884,9 @@ export default function App() {
                         Settings contains your profile, username, email,
                         password, purchases, and sign-out. To sell a file,
                         choose Sell a download when creating a post. Checkout is
-                        test-only; no real money is collected.
-                        Forgotten-password recovery is not implemented yet.
+                        test-only; no real money is collected. Forgot your
+                        password? Use the reset link on the sign-in screen to
+                        receive an email.
                       </p>
                     </>
                   )}

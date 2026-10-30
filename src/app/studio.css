@@ -1639,3 +1639,70 @@ h1 {
     aspect-ratio: 2.5;
   }
 }
+
+/* Recovery uses the same form language as sign-in and settings. */
+.recovery-page {
+  min-height: 100dvh;
+  padding: 40px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.recovery-brand {
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -1.5px;
+  margin-bottom: 28px;
+}
+.recovery-brand span {
+  color: var(--violet);
+}
+.recovery-card {
+  width: min(100%, 480px);
+  max-height: none;
+  margin: 0;
+}
+.recovery-card h1 {
+  font-size: 32px;
+  letter-spacing: -1.2px;
+  margin: 14px 0;
+}
+.recovery-card > p {
+  font-size: 14px;
+  line-height: 1.65;
+  margin-bottom: 24px;
+}
+.recovery-card .eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+.recovery-home {
+  display: block;
+  text-align: center;
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px;
+}
+.recovery-card .error-box a {
+  text-decoration: underline;
+}
+.modal .recovery {
+  display: block;
+  color: var(--violet);
+  margin: 16px auto 0;
+  padding: 10px;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .recovery-page {
+    padding: 28px 16px;
+  }
+  .recovery-card {
+    padding: 28px 22px;
+  }
+}

@@ -1,3 +1,4 @@
+import { requestPasswordReset, resetForgottenPassword } from "@/lib/recovery";
 import { createCheckout } from "@/lib/payments";
 import { changeEmail, changePassword } from "@/lib/account";
 import { beginUpload, completeUpload, signedMediaUrl } from "@/lib/media";
@@ -256,12 +257,8 @@ async function handlePOST(
       }
       return ok({ user: await publicUser(profile) });
     }
-    if (a === "recover") {
-      return ok({
-        message:
-          "Password recovery email requires an email provider. Please contact the instance administrator; no reset email was sent.",
-      });
-    }
+    if (a === "recover") return ok(await requestPasswordReset(b));
+    if (a === "reset-password") return ok(await resetForgottenPassword(b));
     if (a === "logout") {
       const { error } = await authClient().auth.signOut();
       if (error) throw new Error(error.message);

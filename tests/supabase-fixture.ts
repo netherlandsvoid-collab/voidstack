@@ -7,6 +7,13 @@ export function installSupabaseFixture() {
   const accounts = new Map<string, any>();
   const storageObjects = new Map<string, { bytes: Buffer; type: string }>();
   const uploadTokens = new Map<string, string>();
+  const recoveryRequests: {
+    email: string;
+    redirectTo: string;
+    tokenHash?: string;
+  }[] = [];
+  const recoveryTokens = new Map<string, string>();
+  let recoveryFailure = 0;
   let bucketExists = true;
   let failBulk = false;
   const emailRequests: {
@@ -32,11 +39,11 @@ export function installSupabaseFixture() {
     discipline: "Creative explorer",
     createdAt: Date.now(),
   });
-  const token = (u: any) => {
+  const token = (u: any, recovery = false) => {
     const encode = (v: any) =>
       Buffer.from(JSON.stringify(v)).toString("base64url");
     return {
-      access_token: `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: u.id, exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000), role: "authenticated" })}.signature`,
+      access_token: `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: u.id, exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000), role: "authenticated", amr: [{ method: recovery ? "recovery" : "password" }] })}.signature`,
       refresh_token: "refresh_" + u.id,
       expires_in: 3600,
       token_type: "bearer",
@@ -152,6 +159,21 @@ export function installSupabaseFixture() {
       rows = rows.slice(offset, offset + limit);
       return json(rows);
     }
+    if (url.pathname.endsWith("/recover")) {
+      if (recoveryFailure)
+        return json({ message: "Email service unavailable" }, recoveryFailure);
+      const u = accounts.get(body.email);
+      const tokenHash = u
+        ? "recovery_token_" + String(++counter).padStart(20, "0")
+        : undefined;
+      if (tokenHash) recoveryTokens.set(tokenHash, body.email);
+      recoveryRequests.push({
+        email: body.email,
+        redirectTo: url.searchParams.get("redirect_to") || "",
+        tokenHash,
+      });
+      return json({});
+    }
     if (url.pathname.endsWith("/signup")) {
       if (accounts.has(body.email))
         return json({ message: "User already registered" }, 422);
@@ -208,6 +230,16 @@ export function installSupabaseFixture() {
       return json(token(safe));
     }
     if (url.pathname.endsWith("/verify")) {
+      if (body.type === "recovery") {
+        const email = recoveryTokens.get(body.token_hash);
+        const user = email ? accounts.get(email) : null;
+        if (!user)
+          return json({ message: "Token expired", code: "otp_expired" }, 403);
+        recoveryTokens.delete(body.token_hash);
+        const { password, confirmed, ...safe } = user;
+        return json(token(safe, true));
+      }
+
       const u = accounts.get("confirm@example.com");
       if (body.token_hash !== "confirm-valid" || !u)
         return json({ message: "Token expired" }, 403);
@@ -227,7 +259,13 @@ export function installSupabaseFixture() {
       if (!u) return json({ message: "Invalid token" }, 401);
       if (method === "PUT") {
         if (body.password) {
-          if (body.current_password !== u.password)
+          const claims = JSON.parse(
+            Buffer.from(bearer!.split(".")[1], "base64url").toString(),
+          );
+          if (
+            body.current_password !== u.password &&
+            !claims.amr?.some((a: any) => a.method === "recovery")
+          )
             return json({ message: "Current password is incorrect" }, 400);
           u.password = body.password;
         }
@@ -252,6 +290,11 @@ export function installSupabaseFixture() {
     accounts,
     storageObjects,
     emailRequests,
+    recoveryRequests,
+    recoveryTokens,
+    setRecoveryFailure: (status: number) => {
+      recoveryFailure = status;
+    },
     setFailBulk: (value: boolean) => {
       failBulk = value;
     },
