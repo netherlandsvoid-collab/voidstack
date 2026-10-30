@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import { uploadDirect } from "@/lib/direct-upload";
+import ProductFilePicker from "@/components/ProductFilePicker";
 import AccountSettings from "@/components/AccountSettings";
 import {
   Asterisk,
@@ -2073,24 +2074,13 @@ export default function App() {
                           placeholder="19.00"
                         />
                       </label>
-                      <label className="upload-zone compact">
-                        <Upload size={23} />
-                        <strong>
-                          {fileId
-                            ? "Private download uploaded ✓"
-                            : "Upload the buyer’s download"}
-                        </strong>
-                        <span>
-                          Original artwork, Artwork, ZIP, PDF or project file ·
-                          10 MB maximum
-                        </span>
-                        <input
-                          type="file"
-                          hidden
-                          accept=".jpg,.jpeg,.png,.webp,.gif,.zip,.pdf,.fig,.blend,.psd,.ai,.aep"
-                          onChange={(e) => handleUpload(e.target.files, "file")}
-                        />
-                      </label>
+                      <ProductFilePicker
+                        api={api}
+                        onUploaded={(file) => setFileId(file?.id || "")}
+                        onBusyChange={setBusy}
+                        maxBytes={data.uploadLimits?.product}
+                        disabled={busy}
+                      />
                       <p className="fine-print">
                         Post images are public previews. The separate download
                         is delivered after purchase. Personal use; no
@@ -2107,7 +2097,10 @@ export default function App() {
                       {error}
                     </div>
                   )}
-                  <button disabled={busy} className="button primary full">
+                  <button
+                    disabled={busy || (sellDownload && !fileId)}
+                    className="button primary full"
+                  >
                     {busy
                       ? "Working..."
                       : selected
@@ -2778,25 +2771,14 @@ export default function App() {
                       alt="Product preview"
                     />
                   )}
-                  <label className="upload-zone compact">
-                    <Upload size={23} />
-                    <strong>
-                      {fileId
-                        ? "Private file uploaded ✓"
-                        : selected
-                          ? "Replace private file (optional)"
-                          : "Private downloadable file"}
-                    </strong>
-                    <span>
-                      Artwork, ZIP, PDF or project file · 10 MB maximum
-                    </span>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,.gif,.zip,.pdf,.fig,.blend,.psd,.ai,.aep"
-                      hidden
-                      onChange={(e) => handleUpload(e.target.files, "file")}
-                    />
-                  </label>
+                  <ProductFilePicker
+                    api={api}
+                    onUploaded={(file) => setFileId(file?.id || "")}
+                    onBusyChange={setBusy}
+                    maxBytes={data.uploadLimits?.product}
+                    existing={selected?.downloadFile}
+                    disabled={busy}
+                  />
                   <label>
                     Listing status
                     <select
@@ -2809,7 +2791,10 @@ export default function App() {
                     </select>
                   </label>
                   {error && <div className="error-box">{error}</div>}
-                  <button disabled={busy} className="button primary full">
+                  <button
+                    disabled={busy || (!selected && !fileId)}
+                    className="button primary full"
+                  >
                     {busy ? "Uploading..." : "Save your resource"}{" "}
                     <ArrowUpRight size={17} />
                   </button>

@@ -1,7 +1,12 @@
 import { requestPasswordReset, resetForgottenPassword } from "@/lib/recovery";
 import { createCheckout } from "@/lib/payments";
 import { changeEmail, changePassword } from "@/lib/account";
-import { beginUpload, completeUpload, signedMediaUrl } from "@/lib/media";
+import {
+  beginUpload,
+  completeUpload,
+  signedMediaUrl,
+  productMaxBytes,
+} from "@/lib/media";
 import { NextResponse } from "next/server";
 import {
   all,
@@ -74,7 +79,11 @@ async function handleGET(
             .filter((x: any) => x.userId === u.id)
             .map((x: any) => x.target)
         : [];
+      const mediaById = new Map(
+        records.media.map((file: any) => [file.id, file]),
+      );
       return ok({
+        uploadLimits: { product: productMaxBytes() },
         mediaTypes: Object.fromEntries(
           records.media
             .filter((m: any) => !m.private)
@@ -95,7 +104,15 @@ async function handleGET(
           .sort((a: any, b: any) => b.createdAt - a.createdAt),
         products: records.product
           .filter((x: any) => x.status === "published" || x.userId === u?.id)
-          .map(({ fileId, ...p }: any) => p),
+          .map(({ fileId, ...p }: any) => {
+            const file: any = mediaById.get(fileId);
+            return {
+              ...p,
+              ...(p.userId === u?.id && file
+                ? { downloadFile: { name: file.name, size: file.size } }
+                : {}),
+            };
+          }),
         follows: u
           ? followers
               .filter((x: any) => x.userId === u.id)

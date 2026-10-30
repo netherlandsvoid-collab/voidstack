@@ -77,7 +77,7 @@ New uploads go directly from the browser to a private Supabase Storage bucket
 using a server-issued, path-scoped signed upload token. Only small metadata
 requests pass through Vercel. The API verifies session, ownership, actual size,
 content type and common file signatures before making an upload available.
-All files are capped at 10 MB; archive/project files are never executed.
+Public previews and private chat attachments are capped at 10 MB. Product originals use their own configurable limit; archive/project files are never executed.
 
 The existing `/api/media/:id` URLs remain stable. After access checks, the route
 redirects to a short-lived signed Storage URL so large responses also avoid
@@ -191,3 +191,24 @@ Keep the production Site URL `https://voidstack-rosy.vercel.app` and the existin
 The API validates new/confirmed passwords (10–128 characters) before consuming the single-use Supabase recovery token. An ordinary session or signup token cannot authorize a forgotten-password reset. The recovery session is signed out after the update. Missing mail configuration/provider errors are reported honestly; unknown account addresses get the same generic success message. Supabase Auth's email rate limits apply along with the existing per-instance API limiter. No SQL migration, new secret, or environment variable is needed (`APP_URL` must remain the production URL).
 
 Validation: isolated SDK/route tests cover email requests, non-disclosure, wrong origins, invalid/expired/replayed tokens, mismatched/short passwords, account ownership, old/new login credentials, session cleanup, missing configuration, and provider failures. Real inbox delivery and the dashboard template must be checked after deployment.
+
+
+### Private product originals and large uploads
+
+Run `supabase/migrations/004_product_storage.sql` in the Supabase SQL editor. It creates the **private** `voidstack-products` bucket with a 50 MiB default limit. It does not change the existing 10 MiB `voidstack-media` bucket, and rerunning it preserves any higher product-bucket limit you configured. Do not add public read/write policies.
+
+The sale composer and Creator studio now show the selected filename, size, upload progress, verified success, inline failure/retry, and pause/resume/cancel controls. Project file types such as PSD/AI/AEP/BLEND can upload as private binary files when the browser assigns a nonstandard MIME type. Existing listing editors show the current file's name/size to its owner only. Selecting a file does not mean it is attached: only successful storage verification sets the listing file ID.
+
+Product uploads use TUS directly from the browser to Storage in 6 MiB chunks. The server issues an owner/path-scoped signed upload token, then checks the actual stored size/type/signature before recording a private original. File contents never pass through the Vercel API. Automatic retry resumes the accepted byte offset in the current upload; pause/resume works while the page stays open. **Refresh/closing the page loses the upload state.** Signed tickets/pending records expire after two hours. Very slow uploads may need to restart before that deadline. This is not a cross-device/background uploader.
+
+**Supabase Free has a provider ceiling of 50 MB per file. Changing code cannot raise that ceiling.** Files of 100 MB, 1 GB, etc. require an eligible paid Storage plan or a different storage integration. No plan is upgraded automatically.
+
+For a paid project, configure all three limits together:
+
+1. Supabase Storage Settings → global maximum file size: set your chosen maximum.
+2. Storage → `voidstack-products` → Edit bucket → maximum file size: set the same maximum; keep the bucket private.
+3. Vercel Production variable `PRODUCT_MAX_UPLOAD_MB`: set the maximum in MiB, then redeploy. `1024` means 1 GiB and `5120` means 5 GiB. The application supports 1–5120 MiB and defaults to `50` if unset.
+
+The public state response exposes only this numeric upload limit so the file picker can display the correct cap. It never exposes storage secrets, original paths, file IDs, or other sellers' original filenames. The provider's plan/global/bucket restrictions still take precedence. Download authorization and legacy media URLs continue to work.
+
+Tests exercise the real TUS client with a 7 MiB file, a failed chunk/HEAD-offset recovery, private bucket completion, size limits through a 1 GiB metadata ticket, unchanged media limits, ownership, and private metadata visibility. No multi-GB payload or production upload is used by these tests. There is no malware scanner, archive execution, orphan cleanup job, or seller quota/billing system in this change.
