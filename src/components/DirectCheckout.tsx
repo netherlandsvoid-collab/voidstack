@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import {
   money,
   methodLabels,
@@ -22,6 +22,10 @@ export default function DirectCheckout({
   onOrders,
 }: Props) {
   const [order, setOrder] = useState<any>(existingOrder);
+  const statusHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (order?.status) statusHeading.current?.focus({ preventScroll: true });
+  }, [order?.status]);
   const [options, setOptions] = useState<any>(null);
   const [methodId, setMethodId] = useState("");
   const [busy, setBusy] = useState(false),
@@ -84,7 +88,7 @@ export default function DirectCheckout({
   return (
     <div className="direct-checkout">
       <div className="eyebrow">DIRECT TO THE CREATOR</div>
-      <h2>
+      <h2 ref={statusHeading} tabIndex={-1}>
         {order?.status === "paid"
           ? "Your download is ready."
           : "Pay the seller directly."}
