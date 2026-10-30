@@ -88,8 +88,7 @@ to work. The bucket is private and needs no public read/write RLS policies.
 Abandoned or rejected objects remain private; scheduled cleanup and full malware
 scanning/media decoding are not included. Public feed queries still scan record
 types and require pagination/query optimization at scale.
-Password recovery retains the honest "no reset email sent" placeholder until a
-forgotten-password recovery flow is implemented.
+Password recovery sends reset emails through the configured Supabase SMTP provider; see the setup below.
 
 ## Account settings and sale posts
 
@@ -169,3 +168,26 @@ launch work. The in-process throttle is a basic development safeguard.
 The lavender/plum/orange theme lives in `src/app/studio.css`, layered over the existing structural styles. The feed spotlights the first result, shows a linked download only when a published listing exists, and offers a collapsible Filter feed control. The download shelf uses published product data. Navigation changes clear cross-page category filters. Mobile retains a bottom navigation bar and drawer; dark mode uses the same semantic tokens.
 
 `public/studio/*.webp` contains generated sample artwork; only sample seed images and the marketplace banner use it. User-uploaded images and records are unchanged. Manrope is self-hosted under `public/fonts`, with its SIL Open Font License alongside it. No additional deployment variables or SQL are needed. See `design-qa.md` for browser checks and remaining test gaps.
+
+
+### Forgotten-password recovery setup
+
+The sign-in form includes **Forgot password?**. Recovery sends through the existing Supabase Auth/SMTP configuration. New password entry is separate from the signed-in current-password settings flow.
+
+Before deploying this change, in Supabase **Authentication → URL Configuration → Redirect URLs**, add:
+
+```text
+https://voidstack-rosy.vercel.app/reset-password
+```
+
+In **Authentication → Email Templates → Reset Password**, set the reset link to:
+
+```html
+<a href="{{ .SiteURL }}/reset-password#token_hash={{ .TokenHash }}">Reset password</a>
+```
+
+Keep the production Site URL `https://voidstack-rosy.vercel.app` and the existing SMTP configuration. Do not change the signup or change-email templates. The reset template must use this link, rather than `{{ .ConfirmationURL }}`: this flow verifies the recovery token on form submission, not on link opening. URL fragments keep the token out of web-server request logs. The reset page removes it from the address bar and uses a no-referrer policy. Refreshing that page clears the in-memory link; request a fresh email if needed.
+
+The API validates new/confirmed passwords (10–128 characters) before consuming the single-use Supabase recovery token. An ordinary session or signup token cannot authorize a forgotten-password reset. The recovery session is signed out after the update. Missing mail configuration/provider errors are reported honestly; unknown account addresses get the same generic success message. Supabase Auth's email rate limits apply along with the existing per-instance API limiter. No SQL migration, new secret, or environment variable is needed (`APP_URL` must remain the production URL).
+
+Validation: isolated SDK/route tests cover email requests, non-disclosure, wrong origins, invalid/expired/replayed tokens, mismatched/short passwords, account ownership, old/new login credentials, session cleanup, missing configuration, and provider failures. Real inbox delivery and the dashboard template must be checked after deployment.
