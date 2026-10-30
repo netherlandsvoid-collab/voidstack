@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./studio.css";
+import "./polish.css";
 const manrope = localFont({
   src: "../../public/fonts/Manrope.ttf",
   display: "swap",

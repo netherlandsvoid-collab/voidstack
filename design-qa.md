@@ -1,55 +1,92 @@
-# Open Studio redesign review
+# Open Studio responsive and motion polish — design QA
 
 final result: passed
 
-## Visual target and evidence
+## Target and normalization
 
-- Selected truth: third displayed concept, `/workspace/scratch/04aab27885d4/generated_images/exec-9de7122b-11ae-4015-a6ce-9e6b5fb51063.png` (1487 × 1058 pixels).
-- Browser-rendered implementation: `/workspace/scratch/studio-desktop-accepted.jpg` (1348 × 926 pixels). Browser reported CSS viewport 1363 × 936 including scrollbar; browser screenshot surface is slightly smaller. Reference resized proportionally to 1348 × 959 for comparison, with no stretching. Comparison uses the common visible content area, not missing bottom pixels.
-- Full-view paired comparison: `/workspace/scratch/04aab27885d4/studio-accepted-comparison.jpg`.
-- Paired type/art focus: `/workspace/scratch/04aab27885d4/studio-accepted-focus.jpg`.
-- Mobile evidence: `/workspace/scratch/studio-mobile-final.jpg` (390 × 844 crop from actual iframe viewport, no phone frame). Responsive harness: `/workspace/scratch/studio-responsive-final.jpg`.
-- State: home, light theme, anonymous, isolated Supabase fixture using existing sample creators and posts. Production uses real records and chronology; images/captions/prices will differ accordingly.
-- Reviewed in the cloud browser at the local preview. Next development-tool badge is preview infrastructure and is not shipped in the production build.
+Source visual truth is the existing Open Studio interface and the current-run live
+captures under `docs/ux-polish/nexirel-polish-01*` through `04*`. The authorized goal
+is responsive and interaction polish while retaining its palette, typography,
+artwork and working marketplace. It is not a pixel-identical clone.
+
+For direct comparison, the original and revised code were both rendered with the
+same isolated fixture content and seller identity:
+
+- Desktop source: `docs/ux-polish/nexirel-polish-05-baseline-desktop.jpg`.
+- Desktop implementation: `docs/ux-polish/nexirel-polish-07-after-desktop.jpg`.
+- Responsive source: `docs/ux-polish/nexirel-polish-06-baseline-responsive.jpg`.
+- Responsive implementation: `docs/ux-polish/nexirel-polish-08-after-responsive.jpg`.
+- Combined desktop comparison: `docs/ux-polish/nexirel-polish-15-desktop-comparison.jpg`.
+- Focused phone comparison: `docs/ux-polish/nexirel-polish-10-phone-comparison.jpg`.
+
+Browser viewport: 1363 × 936 CSS px, devicePixelRatio 1. Desktop captures returned
+1348 × 926 pixels for both versions, with no resampling. Responsive stage captures
+are 1363 × 936 pixels; its phone/tablet iframes are 390 × 844 and 768 × 844 CSS px
+plus 1px borders. Both versions used the same stage/positions. The phone comparison
+renders the source images at native size and clips the same 392 × 846 stage region
+(x16,y74). Desktop overview comparison scales both captures equally to 640px wide;
+the native phone comparison supplies readable control/typography detail. No image
+generation or alteration was used to create screenshot evidence.
 
 ## Comparison history
 
-1. P2: expanded feed tabs/categories pushed secondary art below the opening composition. Fix: explicit, accessible Filter feed toggle and clearable active-filter state. First evidence `/workspace/scratch/studio-desktop-review.jpg` and `/workspace/scratch/04aab27885d4/studio-comparison.jpg`; revised `/workspace/scratch/studio-desktop-final.jpg`.
-2. P2: hero started too low and cards were too tall relative to selected target. Fix: tighter heading/shelf rhythm, 320px desktop featured art, 2.5:1 secondary art. Final browser geometry: hero top 173px, secondary grid top 655px, secondary art height 206px. Post-fix full/focused paired evidence above shows headline, featured art, caption panel, download shelf, and secondary images follow the selected hierarchy.
-3. P2: overlapping desktop search treatment crowded the 768px tablet heading. Fix: normal-flow header under 1000px and on non-feed screens. Final tablet check: search bottom 60px; heading top 107px. No collision.
-4. P2: small-phone decorative star wrapped alone, and mobile filter icon lost its accessible name. Fix: hide decorative star at <=370px; add permanent Filter feed aria-label. Final 320px check confirms star hidden and document scroll width <= viewport. Mobile screenshot confirms readable single-column feed and persistent bottom navigation.
-5. P2: inherited beige social icon colors had weak contrast against lavender. Fix: use shared muted-ink token and separate light/dark liked states. Final screenshot shows the updated controls.
+1. Initial audit: P2 phone heading wraps a decorative mark; P2 artwork cover crops;
+   P2 tablet sale title is compressed into a narrow column; P2 small mobile controls;
+   P2 long undivided Settings; P2 abrupt and uncontained overlays. Fixed with the
+   responsive header/heading, contained image slots, stacked tablet content, larger
+   controls, tabs and overlay lifecycle. Source/after comparisons above were opened
+   together and inspected.
+2. Browser iteration: long forms needed independently styled fields and a persistent
+   close control; the destination page lost focus to the old modal opener after exit.
+   Fixed scoped controls, sticky close and deferred destination focus. Verified Tab
+   skips hidden forms, close remains at y39–83 in the 844px phone viewport, body
+   overflow resets, and activeElement becomes `main-content` on destination arrival.
+3. Dark iteration: P2 fixed dark banner text was unreadable. Evidence:
+   `nexirel-polish-12-dark-before-fix.jpg`. Changed headline/body to semantic tokens;
+   `nexirel-polish-11-after-dark.jpg` and computed colors confirm light text
+   rgb(245,239,255) over rgb(48,37,63).
+4. Narrow-phone iteration: checked 320px width (305px content with scrollbar), no
+   horizontal overflow. Smallest sale actions stack/wrap. Settled evidence:
+   `docs/ux-polish/nexirel-polish-14-narrow-ready.jpg`. A loading capture was rejected
+   as final-state evidence; the settled capture above was inspected instead.
 
-## Required fidelity surfaces
+## Required surfaces
 
-- Typography: self-hosted Manrope variable font (SIL OFL included), one family, 800-weight display hierarchy, readable captions, fluid headings, wrapping checked at 320/390/768px. Focused comparison confirms the intended heavy rounded type direction. Dynamic user titles keep their own wrapping rather than reproducing fictitious concept copy.
-- Spacing/layout: 224px desktop sidebar, image-led two-part feature, restrained download shelf and two-column secondary grid. Borders limited to navigation/functional grouping; no right-hand promotional panel. Mobile stacks the feature and exposes persistent navigation. Tablet header no longer overlaps content.
-- Color/tokens: lavender base, dark plum text, orange primary actions, violet secondary/active states. Dark variant uses plum surfaces. Primary button text intentionally uses dark ink for stronger contrast than white on orange in the concept. Focus rings/reduced-motion styles retained.
-- Imagery: three separately generated raster artworks match chrome/peach/lavender, sunset circular architecture, and chrome typography subjects. Optimized WebP, about 195–261 KB per image. Existing supplied avatar/art assets retained elsewhere. Generated raster imagery replaces the prior CSS-drawn marketplace banner. Actual uploads are never replaced.
-- Copy/content: headline and discovery/shelf framing match concept. Existing sample names, prices, captions, and order remain grounded in application data, with sample labels. A price appears only for a linked published listing. No earnings, payout success, share action, or fictitious metrics invented.
-- Icons/accessibility: existing Lucide line icon family suits source; Asterisk supplies decorative mark. Icon actions retain accessible names, focus states, native buttons, skip link, and practical touch areas.
+- **Fonts/typography:** retained self-hosted Manrope and its hierarchy. Phone heading
+  now fits without an orphan mark. Form inputs use 16px on phones. Empty-state
+  headings use the same family. No fonts or artwork were substituted.
+- **Spacing/layout:** header has its own sticky row; cards and the download shelf
+  have defined surfaces; phone/tablet layouts stack intentionally. Contained artwork
+  uses matte space rather than cutting off content. This lower density is intentional.
+- **Colors/tokens:** lavender/plum/orange tokens retained. Dark banner and order text
+  now inherit semantic text colors. Theme checks were visual, not a full WCAG audit.
+- **Image quality:** original assets preserved and fully visible in feed frames;
+  no new generated assets, custom illustrations or placeholder replacements.
+- **Copy/content:** existing content retained. Added concise navigation/settings
+  labels and loading feedback. Removed duplicated USD beside other currency prices.
 
-## Interactions and verification
+## Functional and React verification
 
-- Browser checked: feed filter expand, discipline filtering/reset, marketplace navigation, price filter, listing detail open/close, Create post anonymous/auth entry, search creator results and profile navigation, mobile drawer open/close, light/dark toggle.
-- Browser widths checked: desktop 1363 CSS px; iframe viewports 768, 390, 320 CSS px. Document widths stayed <= viewport widths (scrollbar accounts for 15px reductions). Below-fold lazy images are intentionally not all requested at the initial mobile scroll position.
-- Browser console checked: no application errors in inspected logs; browser-extension metadata warnings originate from `chrome-extension://`, outside the app.
-- Existing backend suite: 23 passed, one hosted integration test skipped without TEST_URL. All five isolated journey subtests passed. No live signup, email, payment, upload, or password change performed during this visual review.
-- Production build/type checking passed. Updated existing UI smoke selectors for Create post label; standalone Playwright UI script was not run (browser verification used the cloud browser).
-- No SQL migrations, environment changes, auth-route changes, or storage-policy changes.
+- TypeScript, production build and whitespace checks passed.
+- All five connected mock journeys passed, including direct payment confirmation
+  and signed original-file delivery. No API/payment authorization change was made.
+- Browser-tested feed, marketplace filtering, mobile drawer, tabs, settings drafts,
+  keyboard traversal, Escape, scroll lock, destination focus and the complete fixture
+  buyer-report/seller-confirm/buyer-download-ready path.
+- State refresh aborts stale requests, avoids replacing identical state, pauses
+  polling while hidden and refreshes on return. Removed the EventSource connection
+  to the existing endpoint that intentionally returns 204. Search list work uses
+  React deferred values. Lazy images decode asynchronously; videos preload metadata.
+- Module-scope components, labelled controls, status messages and reduced-motion
+  branches reviewed against the React checklist. Closing checkout retains the same
+  component identity during its exit instead of remounting/requesting options again.
+- Final console checks found an automation-injected html-attribute hydration warning
+  and extension metadata errors, with no separate application exception. The initial
+  preview adapter failure was fixed in the disposable harness, not shipped.
 
-## Follow-up polish / test gaps
+## Remaining gaps / P3 follow-up
 
-- P3: exact portrait avatar photography and secondary thumbnail subjects differ from the concept because the existing application's creators and products are retained.
-- P3: user media have varied aspect ratios; the feature uses a crop and detail view retains the original. Real text-only/video uploads should receive additional visual testing with the user's content.
-- Authenticated settings/composer rendering uses the shared design tokens, but was not exercised in this anonymous browser session. Existing authenticated server journeys passed.
-- Real checkout and payouts remain outside this change and are not enabled by the redesign.
-
-## Implementation checklist
-
-- [x] Selected lavender/orange visual system implemented in existing application.
-- [x] Generated art and local font placed and optimized.
-- [x] Main public interactions and responsive variants checked in browser.
-- [x] P0/P1/P2 findings fixed and final paired comparison inspected.
-- [x] Existing backend tests and production build verified.
-- [ ] Merge reviewed branch and inspect real signed-in content on production.
+Physical phone keyboard/screen-reader testing, OS preference emulation, throttled
+network/low-end hardware frame-rate measurements, and production verification remain
+post-merge checks. No full accessibility or measured performance score is claimed.
+No SQL, new deployment variables or upload-size changes are required.

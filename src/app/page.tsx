@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useDeferredValue } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import { uploadDirect } from "@/lib/direct-upload";
 import ProductFilePicker from "@/components/ProductFilePicker";
@@ -7,6 +7,9 @@ import SellerPaymentSettings from "@/components/SellerPaymentSettings";
 import DirectCheckout from "@/components/DirectCheckout";
 import SellerOrderReview from "@/components/SellerOrderReview";
 import { currencies, money, orderStatus } from "@/lib/payment-methods";
+import SettingsTabs, { type SettingsTab } from "@/components/SettingsTabs";
+import FeedSkeleton from "@/components/FeedSkeleton";
+import { usePresence, useOverlayFocus } from "@/hooks/use-overlay";
 import AccountSettings from "@/components/AccountSettings";
 import {
   Asterisk,
@@ -99,16 +102,25 @@ function IconButton({
   label,
   onClick,
   className = "",
+  expanded,
+  controls,
+  pressed,
 }: {
   children: React.ReactNode;
   label: string;
   onClick?: () => void;
   className?: string;
+  expanded?: boolean;
+  controls?: string;
+  pressed?: boolean;
 }) {
   return (
     <button
       className={`icon-button ${className}`}
       title={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      aria-pressed={pressed}
       aria-label={label}
       onClick={onClick}
     >
@@ -155,8 +167,37 @@ export default function App() {
     [preview, setPreview] = useState(""),
     [messageText, setMessageText] = useState(""),
     [messageImage, setMessageImage] = useState("");
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("profile");
+  const searchQuery = useDeferredValue(query);
+  const dialogPresence = usePresence(modal);
+  const navigationPresence = usePresence(mobileNav ? "navigation" : "");
+  const modalRef = useRef<HTMLDivElement>(null);
+  const navigationRef = useRef<HTMLElement>(null);
+  const refreshController = useRef<AbortController | null>(null);
+  const lastState = useRef("");
+  const lastRefresh = useRef(0);
+  const pendingPageFocus = useRef(false);
+  useOverlayFocus(
+    dialogPresence.value || navigationPresence.value,
+    dialogPresence.value ? modalRef : navigationRef,
+    () => {
+      setModal("");
+      setMobileNav(false);
+    },
+  );
+  useEffect(() => {
+    if (
+      !dialogPresence.value &&
+      !navigationPresence.value &&
+      pendingPageFocus.current
+    ) {
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+      pendingPageFocus.current = false;
+    }
+  }, [page, dialogPresence.value, navigationPresence.value]);
   const [sellDownload, setSellDownload] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [feedFiltersOpen, setFeedFiltersOpen] = useState(false);
   const productsById = new Map<string, Item>(
     (data.products as Item[]).map((p) => [p.id, p]),
@@ -172,23 +213,46 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(""), 4500);
   };
   const refresh = async () => {
+    refreshController.current?.abort();
+    const controller = new AbortController();
+    refreshController.current = controller;
+    lastRefresh.current = Date.now();
     try {
-      const res = await fetch("/api/state");
-      setData(await readApiResponse(res));
+      const res = await fetch("/api/state", { signal: controller.signal });
+      const next = await readApiResponse(res);
+      if (controller.signal.aborted) return;
+      const serialized = JSON.stringify(next);
+      if (serialized !== lastState.current) {
+        lastState.current = serialized;
+        setData(next);
+      }
+      setLoadError("");
     } catch (e) {
-      setError((e as Error).message);
+      if (!controller.signal.aborted) setLoadError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, 30000);
-    const stream = new EventSource("/api/events");
-    stream.onmessage = () => refresh();
+    const resume = () => {
+      if (!document.hidden && Date.now() - lastRefresh.current > 2000)
+        refresh();
+    };
+    const timer = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 30000);
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("focus", resume);
+    const desktop = window.matchMedia("(min-width: 761px)");
+    const closeMobileNavigation = () => {
+      if (desktop.matches) setMobileNav(false);
+    };
+    desktop.addEventListener("change", closeMobileNavigation);
     const initial = new URLSearchParams(location.search);
     if (["login", "recover"].includes(initial.get("auth") || "")) {
-      open("auth");
+      setModal("auth");
+      setAuthNotice("");
       setAuthMode(initial.get("auth")!);
       history.replaceState(null, "", "/");
     }
@@ -210,7 +274,11 @@ export default function App() {
     setDark(localStorage.getItem("nexirel-theme") === "dark");
     return () => {
       clearInterval(timer);
-      stream.close();
+      refreshController.current?.abort();
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("focus", resume);
+      desktop.removeEventListener("change", closeMobileNavigation);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
   useEffect(() => {
@@ -227,38 +295,6 @@ export default function App() {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     localStorage.setItem("nexirel-theme", dark ? "dark" : "light");
   }, [dark]);
-  useEffect(() => {
-    if (!modal) return;
-    const close = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setModal("");
-    };
-    document.addEventListener("keydown", close);
-    const previous = document.activeElement as HTMLElement;
-    const dialog = document.querySelector<HTMLDivElement>('[role="dialog"]');
-    dialog?.focus();
-    const trap = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const elements = dialog?.querySelectorAll<HTMLElement>(
-        "button,input,textarea,select,a[href]",
-      );
-      if (!elements?.length) return;
-      const first = elements[0],
-        last = elements[elements.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", trap);
-    return () => {
-      document.removeEventListener("keydown", close);
-      document.removeEventListener("keydown", trap);
-      previous?.focus();
-    };
-  }, [modal]);
   async function api(action: string, body: Item = {}) {
     const res = await fetch("/api/" + action, {
       method: "POST",
@@ -283,8 +319,15 @@ export default function App() {
     }
   }
   function open(name: string, item: Item | null = null) {
+    if (name === "auth" && loading) {
+      tell("Loading your account… Please try again in a moment.");
+      return;
+    }
     setSelected(item);
     setModal(name);
+    setMobileNav(false);
+    setSearchOpen(false);
+    if (name === "settings") setSettingsTab(item?.settingsTab || "profile");
     if (name === "auth") {
       setAuthMode("login");
       setAuthNotice("");
@@ -296,6 +339,7 @@ export default function App() {
     setSellDownload(false);
   }
   function go(id: string) {
+    pendingPageFocus.current = true;
     setPage(id);
     if (id !== page) setCategory("For you");
     setQuery("");
@@ -303,7 +347,17 @@ export default function App() {
     setMobileNav(false);
     setLimit(6);
     if (id === "notifications" && me) action("read");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+    if (!dialogPresence.value && !navigationPresence.value)
+      requestAnimationFrame(() => {
+        document.getElementById("main-content")?.focus({ preventScroll: true });
+        pendingPageFocus.current = false;
+      });
   }
   function profile(id: string) {
     setProfileId(id);
@@ -434,7 +488,7 @@ export default function App() {
     posts = posts.filter((p) =>
       `${p.title} ${p.caption} ${user(p.userId)?.name} ${p.tags.join(" ")}`
         .toLowerCase()
-        .includes(query.toLowerCase()),
+        .includes(searchQuery.toLowerCase()),
     );
   let products = data.products.filter(
     (p: Item) =>
@@ -442,7 +496,7 @@ export default function App() {
       (!query ||
         `${p.title} ${p.category}`
           .toLowerCase()
-          .includes(query.toLowerCase())) &&
+          .includes(searchQuery.toLowerCase())) &&
       (currencyFilter === "all" || (p.currency || "USD") === currencyFilter),
   );
   if (category !== "For you" && page === "marketplace")
@@ -499,7 +553,7 @@ export default function App() {
       <article className="product-card" key={p.id}>
         <button className="product-art" onClick={() => open("product", p)}>
           {p.image ? (
-            <img src={p.image} alt={p.title} />
+            <img src={p.image} alt={p.title} loading="lazy" decoding="async" />
           ) : (
             <div className="art-placeholder">
               <Palette size={48} />
@@ -557,12 +611,13 @@ export default function App() {
         >
           {p.image ? (
             data.mediaTypes?.[p.image]?.startsWith("video/") ? (
-              <video src={p.image} controls />
+              <video src={p.image} controls preload="metadata" playsInline />
             ) : (
               <img
                 src={p.image}
                 alt={p.title}
                 loading={featured ? "eager" : "lazy"}
+                decoding="async"
               />
             )
           ) : (
@@ -642,6 +697,7 @@ export default function App() {
             <div>
               <button
                 aria-label={liked ? "Unlike post" : "Like post"}
+                aria-pressed={liked}
                 className={liked ? "liked" : ""}
                 onClick={() => action("like", { target: p.id })}
               >
@@ -661,6 +717,7 @@ export default function App() {
             </div>
             <IconButton
               label={saved ? "Unsave post" : "Save post"}
+              pressed={saved}
               className={saved ? "saved" : ""}
               onClick={() =>
                 action(
@@ -684,16 +741,23 @@ export default function App() {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      {mobileNav && (
+      {navigationPresence.value && (
         <button
-          className="navigation-scrim"
+          className={`navigation-scrim ${navigationPresence.exiting ? "is-exiting" : ""}`}
           aria-label="Close navigation"
+          aria-hidden="true"
+          tabIndex={-1}
           onClick={() => setMobileNav(false)}
         />
       )}
       <aside
         id="main-navigation"
-        className={`sidebar ${mobileNav ? "mobile-open" : ""}`}
+        ref={navigationRef}
+        inert={!!dialogPresence.value}
+        className={`sidebar ${navigationPresence.value ? "mobile-open" : ""} ${navigationPresence.exiting ? "is-exiting" : ""}`}
+        role={navigationPresence.value ? "dialog" : undefined}
+        aria-modal={navigationPresence.value ? true : undefined}
+        tabIndex={-1}
         aria-label="Main navigation"
       >
         <a href="/" className="wordmark">
@@ -702,6 +766,13 @@ export default function App() {
           </span>
           nexirel<span className="brand-dot">.</span>
         </a>
+        <button
+          className="drawer-close icon-button"
+          aria-label="Close navigation"
+          onClick={() => setMobileNav(false)}
+        >
+          <X size={20} />
+        </button>
         <div className="workspace-label">THE CREATIVE COMMUNITY</div>
         <nav>
           {navs
@@ -766,16 +837,32 @@ export default function App() {
           </div>
         </div>
       </aside>
-      <div className="main-shell">
+      <div
+        className="main-shell"
+        inert={!!dialogPresence.value || !!navigationPresence.value}
+      >
         <header className="topbar">
           <div className="topbar-breadcrumb">
             <IconButton
               label={mobileNav ? "Close navigation" : "Open navigation"}
               className="mobile-menu"
+              expanded={mobileNav}
+              controls="main-navigation"
               onClick={() => setMobileNav(!mobileNav)}
             >
               <Menu size={20} />
             </IconButton>
+            <span className="header-location">
+              {page === "home"
+                ? "Discover"
+                : page === "seller"
+                  ? "Creator studio"
+                  : page === "downloads"
+                    ? "Your purchases"
+                    : page === "profile"
+                      ? "Creative profile"
+                      : page.charAt(0).toUpperCase() + page.slice(1)}
+            </span>
           </div>
           <div className="topbar-actions">
             <div className="search-wrap">
@@ -789,6 +876,20 @@ export default function App() {
                   setSearchOpen(!!e.target.value);
                 }}
                 onFocus={() => query && setSearchOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setSearchOpen(false);
+                    event.currentTarget.blur();
+                  }
+                }}
+                onBlur={(event) => {
+                  if (
+                    !event.currentTarget.parentElement?.contains(
+                      event.relatedTarget as Node,
+                    )
+                  )
+                    setSearchOpen(false);
+                }}
               />
               <kbd>Ctrl K</kbd>
               {searchOpen && (
@@ -798,7 +899,7 @@ export default function App() {
                     .filter((u) =>
                       `${u.name} ${u.username}`
                         .toLowerCase()
-                        .includes(query.toLowerCase()),
+                        .includes(searchQuery.toLowerCase()),
                     )
                     .slice(0, 4)
                     .map((u) => (
@@ -847,7 +948,12 @@ export default function App() {
           </div>
         </header>
         <div className="content-layout wide-layout">
-          <main id="main-content" className="main-content" tabIndex={-1}>
+          <main
+            id="main-content"
+            className="main-content page-view"
+            tabIndex={-1}
+            key={page}
+          >
             {["home", "explore", "saved"].includes(page) && (
               <>
                 <div className="page-heading feed-heading">
@@ -905,11 +1011,7 @@ export default function App() {
                   </div>
                 )}
                 {loading ? (
-                  <div className="masonry">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div className="skeleton" key={i} />
-                    ))}
-                  </div>
+                  <FeedSkeleton />
                 ) : posts.length ? (
                   <>
                     {page !== "saved" && postCard(posts[0], true)}
@@ -1632,7 +1734,9 @@ export default function App() {
                     </div>
                     <button
                       className="button secondary"
-                      onClick={() => open("settings")}
+                      onClick={() =>
+                        open("settings", { settingsTab: "payments" })
+                      }
                     >
                       Set up payment details
                     </button>
@@ -1786,19 +1890,24 @@ export default function App() {
                 )}
               </>
             )}
-            {error && !modal && (
-              <div className="error-box">
-                {error}
+            {loadError && !modal && (
+              <div className="error-box" role="alert">
+                {loadError}
                 <button onClick={refresh}>Retry</button>
               </div>
             )}
           </main>
         </div>
       </div>
-      <nav className="mobile-bottom">
+      <nav
+        className="mobile-bottom"
+        aria-label="Quick navigation"
+        inert={!!dialogPresence.value || !!navigationPresence.value}
+      >
         {navs.slice(0, 4).map((n) => (
           <button
             className={page === n.id ? "active" : ""}
+            aria-current={page === n.id ? "page" : undefined}
             key={n.id}
             onClick={() => go(n.id)}
           >
@@ -1823,9 +1932,9 @@ export default function App() {
           </button>
         </div>
       )}
-      {modal && (
+      {dialogPresence.value && (
         <div
-          className="modal-backdrop"
+          className={`modal-backdrop ${dialogPresence.exiting ? "is-exiting" : ""}`}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setModal("");
@@ -1834,17 +1943,29 @@ export default function App() {
           }}
         >
           <div
-            className={`modal ${["post", "product"].includes(modal) ? "detail-modal" : ""}`}
+            ref={modalRef}
+            className={`modal ${["post", "product"].includes(dialogPresence.value) ? "detail-modal" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
-              modal === "auth"
+              dialogPresence.value === "auth"
                 ? "Join Nexirel"
-                : modal === "post"
+                : dialogPresence.value === "post"
                   ? "Post details"
-                  : modal === "product"
+                  : dialogPresence.value === "product"
                     ? "Product details"
-                    : modal
+                    : (
+                        {
+                          settings: "Your settings",
+                          checkout: "Pay the seller",
+                          "direct-order": "Payment status",
+                          create: "Create a post",
+                          listing: "Product listing",
+                          report: "Report content",
+                          options: "Post actions",
+                          "new-chat": "New conversation",
+                        } as Record<string, string>
+                      )[dialogPresence.value] || dialogPresence.value
             }
             tabIndex={-1}
           >
@@ -1858,7 +1979,7 @@ export default function App() {
             >
               <X size={20} />
             </IconButton>
-            {modal === "auth" && (
+            {dialogPresence.value === "auth" && (
               <>
                 <Asterisk
                   className="modal-flower"
@@ -1997,7 +2118,7 @@ export default function App() {
                 </p>
               </>
             )}
-            {modal === "create" && (
+            {dialogPresence.value === "create" && (
               <>
                 <div className="eyebrow">LET YOUR WORK DO THE TALKING</div>
                 <h2>
@@ -2150,98 +2271,122 @@ export default function App() {
                 </form>
               </>
             )}
-            {modal === "settings" && (
+            {dialogPresence.value === "settings" && (
               <>
-                <div className="eyebrow">MAKE YOURSELF AT HOME</div>
-                <h2>Your creative identity.</h2>
-                <form onSubmit={submit}>
-                  <label>
-                    Profile picture
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => handleUpload(e.target.files, "preview")}
-                    />
-                  </label>
-                  {preview && (
-                    <img
-                      className="avatar"
-                      src={preview}
-                      width={60}
-                      height={60}
-                      alt="Profile preview"
-                    />
-                  )}
-                  <div className="form-grid">
+                <div className="eyebrow">YOUR NEXIREL</div>
+                <h2>Your space, your way.</h2>
+                <SettingsTabs value={settingsTab} onChange={setSettingsTab} />
+                <div
+                  id="settings-profile-panel"
+                  role="tabpanel"
+                  aria-labelledby="settings-profile-tab"
+                  hidden={settingsTab !== "profile"}
+                >
+                  <form onSubmit={submit}>
                     <label>
-                      Name
+                      Profile picture
                       <input
-                        name="name"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) =>
+                          handleUpload(e.target.files, "preview")
+                        }
+                      />
+                    </label>
+                    {preview && (
+                      <img
+                        className="avatar"
+                        src={preview}
+                        width={60}
+                        height={60}
+                        alt="Profile preview"
+                      />
+                    )}
+                    <div className="form-grid">
+                      <label>
+                        Name
+                        <input
+                          name="name"
+                          required
+                          defaultValue={me?.name}
+                          maxLength={60}
+                        />
+                      </label>
+                      <label>
+                        Creative discipline
+                        <input
+                          name="discipline"
+                          placeholder="Illustration & design"
+                          defaultValue={me?.discipline}
+                          maxLength={100}
+                        />
+                      </label>
+                    </div>
+                    <label>
+                      Username
+                      <input
+                        name="username"
                         required
-                        defaultValue={me?.name}
-                        maxLength={60}
+                        minLength={3}
+                        maxLength={24}
+                        pattern="[a-zA-Z0-9_]{3,24}"
+                        defaultValue={me?.username}
+                        autoComplete="username"
+                      />
+                      <span className="fine-print">
+                        3–24 letters, numbers or underscores.
+                      </span>
+                    </label>
+                    <label>
+                      A little about you
+                      <textarea
+                        name="bio"
+                        rows={3}
+                        defaultValue={me?.bio}
+                        maxLength={500}
+                        placeholder="Your story, in a few words."
                       />
                     </label>
                     <label>
-                      Creative discipline
+                      Website
                       <input
-                        name="discipline"
-                        placeholder="Illustration & design"
-                        defaultValue={me?.discipline}
-                        maxLength={100}
+                        name="website"
+                        type="url"
+                        defaultValue={me?.website}
+                        placeholder="https://your-portfolio.com"
                       />
                     </label>
-                  </div>
-                  <label>
-                    Username
-                    <input
-                      name="username"
-                      required
-                      minLength={3}
-                      maxLength={24}
-                      pattern="[a-zA-Z0-9_]{3,24}"
-                      defaultValue={me?.username}
-                      autoComplete="username"
-                    />
-                    <span className="fine-print">
-                      3–24 letters, numbers or underscores.
-                    </span>
-                  </label>
-                  <label>
-                    A little about you
-                    <textarea
-                      name="bio"
-                      rows={3}
-                      defaultValue={me?.bio}
-                      maxLength={500}
-                      placeholder="Your story, in a few words."
-                    />
-                  </label>
-                  <label>
-                    Website
-                    <input
-                      name="website"
-                      type="url"
-                      defaultValue={me?.website}
-                      placeholder="https://your-portfolio.com"
-                    />
-                  </label>
-                  {error && <div className="error-box">{error}</div>}
-                  <button disabled={busy} className="button primary full">
-                    Save profile <Check size={17} />
-                  </button>
-                </form>
-                <AccountSettings
-                  email={me?.email || ""}
-                  api={api}
-                  onUpdated={refresh}
-                />
-                <SellerPaymentSettings
-                  key={me?.id}
-                  initial={data.sellerPaymentMethods || []}
-                  api={api}
-                  onUpdated={refresh}
-                />
+                    {error && <div className="error-box">{error}</div>}
+                    <button disabled={busy} className="button primary full">
+                      Save profile <Check size={17} />
+                    </button>
+                  </form>
+                </div>
+                <div
+                  id="settings-security-panel"
+                  role="tabpanel"
+                  aria-labelledby="settings-security-tab"
+                  hidden={settingsTab !== "security"}
+                >
+                  <AccountSettings
+                    email={me?.email || ""}
+                    api={api}
+                    onUpdated={refresh}
+                  />
+                </div>
+                <div
+                  id="settings-payments-panel"
+                  role="tabpanel"
+                  aria-labelledby="settings-payments-tab"
+                  hidden={settingsTab !== "payments"}
+                >
+                  <SellerPaymentSettings
+                    key={me?.id}
+                    initial={data.sellerPaymentMethods || []}
+                    api={api}
+                    onUpdated={refresh}
+                  />
+                </div>
                 <div className="settings-links">
                   <button
                     onClick={() => {
@@ -2276,7 +2421,7 @@ export default function App() {
                 </div>
               </>
             )}
-            {modal === "post" &&
+            {dialogPresence.value === "post" &&
               (currentPost ? (
                 <>
                   <div className="detail-art">
@@ -2423,7 +2568,7 @@ export default function App() {
               ) : (
                 <p>Loading post...</p>
               ))}
-            {modal === "options" && selected && (
+            {dialogPresence.value === "options" && selected && (
               <>
                 <h2>A little housekeeping.</h2>
                 <div className="settings-links">
@@ -2483,7 +2628,7 @@ export default function App() {
                 </div>
               </>
             )}
-            {modal === "report" && (
+            {dialogPresence.value === "report" && (
               <>
                 <h2>Help keep this space thoughtful.</h2>
                 <form onSubmit={submit}>
@@ -2504,7 +2649,7 @@ export default function App() {
                 </form>
               </>
             )}
-            {modal === "new-chat" && (
+            {dialogPresence.value === "new-chat" && (
               <>
                 <div className="eyebrow">FIND YOUR PEOPLE</div>
                 <h2>A creative connection.</h2>
@@ -2543,7 +2688,7 @@ export default function App() {
                 </div>
               </>
             )}
-            {modal === "product" && selected && (
+            {dialogPresence.value === "product" && selected && (
               <>
                 <div className="detail-art product-detail-art">
                   {selected.image ? (
@@ -2586,10 +2731,7 @@ export default function App() {
                     </div>
                   </div>
                   <div className="purchase-price">
-                    <strong>
-                      {money(selected.price, selected.currency)}
-                      <small> USD</small>
-                    </strong>
+                    <strong>{money(selected.price, selected.currency)}</strong>
                     <span>One-time purchase</span>
                   </div>
                   <button
@@ -2607,38 +2749,39 @@ export default function App() {
                 </div>
               </>
             )}
-            {["checkout", "direct-order"].includes(modal) && selected && (
-              <DirectCheckout
-                key={modal + selected.id}
-                product={
-                  modal === "checkout"
-                    ? selected
-                    : {
-                        id: selected.productId,
-                        title: selected.title,
-                        price: selected.amount,
-                        currency: selected.currency,
-                      }
-                }
-                existingOrder={
-                  modal === "direct-order"
-                    ? data.orders.find((o: Item) => o.id === selected.id) ||
-                      selected
-                    : data.orders.find(
-                        (o: Item) =>
-                          o.productId === selected.id &&
-                          (o.mode === "direct" || o.status === "paid"),
-                      )
-                }
-                api={api}
-                onUpdated={refresh}
-                onOrders={() => {
-                  setModal("");
-                  go("downloads");
-                }}
-              />
-            )}
-            {modal === "listing" && (
+            {["checkout", "direct-order"].includes(dialogPresence.value) &&
+              selected && (
+                <DirectCheckout
+                  key={dialogPresence.value + selected.id}
+                  product={
+                    dialogPresence.value === "checkout"
+                      ? selected
+                      : {
+                          id: selected.productId,
+                          title: selected.title,
+                          price: selected.amount,
+                          currency: selected.currency,
+                        }
+                  }
+                  existingOrder={
+                    dialogPresence.value === "direct-order"
+                      ? data.orders.find((o: Item) => o.id === selected.id) ||
+                        selected
+                      : data.orders.find(
+                          (o: Item) =>
+                            o.productId === selected.id &&
+                            (o.mode === "direct" || o.status === "paid"),
+                        )
+                  }
+                  api={api}
+                  onUpdated={refresh}
+                  onOrders={() => {
+                    setModal("");
+                    go("downloads");
+                  }}
+                />
+              )}
+            {dialogPresence.value === "listing" && (
               <>
                 <div className="eyebrow">MADE BY YOU</div>
                 <h2>
@@ -2794,7 +2937,9 @@ export default function App() {
                 </form>
               </>
             )}
-            {["about", "guidelines", "privacy", "help"].includes(modal) && (
+            {["about", "guidelines", "privacy", "help"].includes(
+              dialogPresence.value,
+            ) && (
               <>
                 <Asterisk
                   className="modal-flower"
@@ -2802,16 +2947,16 @@ export default function App() {
                   aria-hidden="true"
                 />
                 <h2>
-                  {modal === "about"
+                  {dialogPresence.value === "about"
                     ? "A home for creative minds."
-                    : modal === "guidelines"
+                    : dialogPresence.value === "guidelines"
                       ? "Make it a good place."
-                      : modal === "privacy"
+                      : dialogPresence.value === "privacy"
                         ? "Your work. Your privacy."
                         : "A little help along the way."}
                 </h2>
                 <div className="prose">
-                  {modal === "about" ? (
+                  {dialogPresence.value === "about" ? (
                     <>
                       <p>
                         Nexirel is a place to share what you make, connect with
@@ -2824,7 +2969,7 @@ export default function App() {
                         separate from your own posts and purchases.
                       </p>
                     </>
-                  ) : modal === "guidelines" ? (
+                  ) : dialogPresence.value === "guidelines" ? (
                     <>
                       <p>
                         Share work you own or have permission to share. Credit
@@ -2837,7 +2982,7 @@ export default function App() {
                         moderation and uploaded-file scanning.
                       </p>
                     </>
-                  ) : modal === "privacy" ? (
+                  ) : dialogPresence.value === "privacy" ? (
                     <>
                       <p>
                         This instance stores accounts, posts, conversations, and
