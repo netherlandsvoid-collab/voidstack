@@ -249,8 +249,28 @@ export function installSupabaseFixture() {
               400,
             );
           for (const row of body) records.set(row.kind + ":" + row.id, row);
-        } else records.set(body.kind + ":" + body.id, body);
+        } else if (!(
+          new Headers(init?.headers)
+            .get("prefer")
+            ?.includes("resolution=ignore-duplicates") &&
+          records.has(body.kind + ":" + body.id)
+        ))
+          records.set(body.kind + ":" + body.id, body);
         return new Response(null, { status: 201 });
+      }
+      if (method === "PATCH") {
+        const row = records.get(kind + ":" + id);
+        const matches =
+          row &&
+          [...url.searchParams].every(
+            ([key, value]) =>
+              !key.startsWith("data->>") ||
+              String(row.data[key.slice(7)]) === value.replace(/^eq\./, ""),
+          );
+        if (!matches) return json([]);
+        const updated = { ...row, ...body };
+        records.set(kind + ":" + id, updated);
+        return json([updated]);
       }
       if (method === "DELETE") {
         records.delete(kind + ":" + id);

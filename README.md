@@ -101,14 +101,14 @@ user's email appears only in the private `me` response, never public creator dat
 Forgotten-password recovery is still separate from signed-in password changes.
 
 In the post composer, choose **Sell a download**, add a public preview, enter a
-USD price ($1–$10,000), and upload the buyer's private original/archive/project
+price and currency, and upload the buyer's private original/archive/project
 file. The post and published marketplace product are saved in one bulk upsert.
 The feed and post details show the price and link to the product. Editing a sale
 post preserves the product link; edit its price or private file in Creator studio.
 A normal post remains free. Listings currently use a personal-use licence.
 
-Checkout remains test-only and simulated production checkout stays disabled by
-default. A price tag is not a live payment integration or real seller payout.
+Checkout now supports direct payments to sellers with manual receipt confirmation.
+See Payments below for setup and the delivery flow.
 No new SQL migration or environment variables are required for these controls;
 the email callback Redirect URL above must be configured before email changes.
 
@@ -151,13 +151,50 @@ Supabase Auth only on your dedicated test project.
 
 ## Payments and launch scope
 
-Stripe **test mode only** remains optional. Set `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECTED_ACCOUNTS` (seller ID → onboarded test
-Connect account ID), and `APP_URL`. Only signed, matching payment events grant
-paid-download access. Downloads require a session, paid order and short-lived
-signature shared consistently across serverless instances. Real commerce,
-seller onboarding, production payouts and regional eligibility are not enabled.
-Do not enable simulated checkout on a public site.
+Buyers pay sellers directly outside Nexirel. There is no automatic provider charge,
+escrow, cross-currency conversion, automatic payment verification, or automatic refund.
+
+1. In **Settings → Receive payments**, sellers add up to five bank accounts,
+   PayPal emails, Paystack payment links or Flutterwave payment links, each with a
+   receiving currency. Links must use HTTPS on the provider's allowed domains.
+   Sellers need their own working receiving account/link; saving details does not
+   activate any provider or verify account ownership.
+2. Set the listing's currency to match a saved payment method. Existing listings
+   retain USD. Supported currencies are USD, NGN, EUR, GBP, CAD, AUD, GHS, KES and
+   ZAR. There is no conversion. NGN/KES listings allow prices from 1 to 10,000,000;
+   other currencies allow 1 to 10,000, at most two decimal places. Marketplace
+   price sorting groups currencies before sorting amounts.
+3. Buyer selects **Get this resource → Show payment instructions**, sends the
+   exact amount to the seller, and supplies their payer name and transaction ID
+   through **I've sent payment**. This does not grant download access.
+4. Seller opens **Creator studio → Recent orders → Payment details & review**,
+   independently checks the actual account and confirms full receipt to unlock
+   the file, or sends a payment-not-found note so the buyer can check and resubmit.
+5. Buyer returns to **Purchases & downloads** to reopen instructions/check status,
+   or download once confirmed. Status refreshes on the app's normal polling cycle.
+
+Payment settings are separate private `seller-payment` records in the existing
+server-only table. Public profiles/state never contain them; authenticated buyers
+can see the matching seller details at checkout. Buyer and seller each see their
+order's payment snapshot. Downloads still require the buyer's session, paid order,
+and expiring signed URL. The order captures the original file, title, price,
+currency and selected payment instructions, so later listing/settings edits do not
+replace an existing order's agreement. Personal bank details are intentionally
+shared with buyers; do not enter card data, passwords or provider API secrets.
+
+The existing primary key makes direct order creation idempotent. Conditional
+PostgREST updates check status and revision to prevent concurrent confirmation or
+stale reviews from reverting paid orders. Only the owning seller can confirm;
+buyers and other users cannot approve payments. No receipt image is treated as
+proof. Sample resources cannot receive direct orders. Existing paid development
+orders remain accessible and keep their original mode labels.
+
+**No new SQL, payment API keys or environment variables are needed.** Existing
+Supabase runtime/table and private storage setup must already work. Deploy the
+code, then sellers configure their own payment options. `ENABLE_DEV_CHECKOUT` is
+legacy and no longer creates simulated orders. Stripe test helpers/webhook remain
+for existing test records; the normal checkout endpoint exclusively creates direct
+orders and never completes a simulated purchase.
 
 Distributed rate limiting, moderation operations, malware scanning, backups,
 account deletion/export, real payment-provider readiness and load testing remain

@@ -181,12 +181,79 @@ test("connected creative journeys and server access controls", { skip: !process.
     },
   );
   await t.test(
-    "development checkout is idempotent; authorised signed downloads survive archiving",
+    "direct checkout waits for seller confirmation; authorised signed downloads survive archiving",
     async () => {
-      order = (await request("checkout", { productId: product.id }, b.cookie))
-        .data;
+      const settings = (
+        await request(
+          "seller-payment",
+          {
+            methods: [
+              {
+                kind: "paypal",
+                email: "seller@example.com",
+                currency: "USD",
+              },
+            ],
+          },
+          a.cookie,
+        )
+      ).data;
+      order = (
+        await request(
+          "checkout",
+          { productId: product.id, methodId: settings.methods[0].id },
+          b.cookie,
+        )
+      ).data;
+      assert.equal(order.status, "awaiting_payment");
+      assert.equal(order.mode, "direct");
+      assert.equal(
+        (await request("download-link", { orderId: order.id }, b.cookie)).r
+          .status,
+        403,
+      );
+      order = (
+        await request(
+          "direct-order",
+          {
+            orderId: order.id,
+            revision: order.revision,
+            action: "sent",
+            reference: "payment-123",
+            payerName: "Buyer",
+          },
+          b.cookie,
+        )
+      ).data;
+      assert.equal(order.status, "awaiting_confirmation");
+      assert.equal(
+        (
+          await request(
+            "direct-order",
+            {
+              orderId: order.id,
+              revision: order.revision,
+              action: "confirm",
+              received: true,
+            },
+            b.cookie,
+          )
+        ).r.status,
+        400,
+      );
+      order = (
+        await request(
+          "direct-order",
+          {
+            orderId: order.id,
+            revision: order.revision,
+            action: "confirm",
+            received: true,
+          },
+          a.cookie,
+        )
+      ).data;
       assert.equal(order.status, "paid");
-      assert.equal(order.mode, "development");
       assert.equal(
         (await request("checkout", { productId: product.id }, b.cookie)).data
           .id,
@@ -211,9 +278,12 @@ test("connected creative journeys and server access controls", { skip: !process.
       assert.match(await downloaded.text(), /%PDF-1.4/);
       assert.equal(
         (
-          await fetch(base + link.replace(/signature=.*/, "signature=wrong"), {
-            headers: { cookie: b.cookie },
-          })
+          await fetch(
+            base + link.replace(/signature=.*/, "signature=wrong"),
+            {
+              headers: { cookie: b.cookie },
+            },
+          )
         ).status,
         403,
       );
@@ -223,8 +293,13 @@ test("connected creative journeys and server access controls", { skip: !process.
         200,
       );
       assert.equal(
-        (await request("admin", { kind: "user", id: a.data.user.id }, b.cookie))
-          .r.status,
+        (
+          await request(
+            "admin",
+            { kind: "user", id: a.data.user.id },
+            b.cookie,
+          )
+        ).r.status,
         403,
       );
     },

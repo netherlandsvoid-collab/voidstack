@@ -1825,3 +1825,150 @@ h1 {
   background: var(--violet);
   border-radius: 8px;
 }
+
+/* Direct seller payments */
+.payment-fields {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.payment-method-editor {
+  border: 1px solid var(--line, #ddd5e9);
+  border-radius: 16px;
+  padding: 18px;
+  margin: 18px 0;
+  min-width: 0;
+}
+.payment-method-editor legend {
+  font-weight: 700;
+  padding: 0 6px;
+}
+.payment-details {
+  background: var(--surface, #f2edf8);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+}
+.payment-details dl {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+}
+.payment-details dt {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.payment-details dd {
+  margin: 0 0 8px;
+  font-weight: 600;
+  user-select: all;
+}
+.payment-details p {
+  white-space: pre-wrap;
+}
+.order-reference {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.orders-list > .seller-order-card {
+  display: block;
+}
+.order-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.order-summary > span:first-child {
+  flex: 1;
+  min-width: 160px;
+}
+.seller-order-card details {
+  margin-top: 14px;
+}
+.seller-order-card summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.seller-order-card form {
+  margin-top: 16px;
+  max-width: 680px;
+}
+.review-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.payment-confirm {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  line-height: 1.6;
+}
+.payment-confirm input {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  margin-top: 4px;
+}
+.direct-checkout .checkout-item {
+  flex-wrap: wrap;
+}
+.direct-checkout .checkout-item > strong {
+  flex: 1;
+}
+[data-theme="dark"] .payment-details {
+  background: #30283d;
+}
+.payment-method-editor,
+.direct-checkout form,
+.seller-order-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.payment-method-editor label,
+.direct-checkout label,
+.seller-order-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.payment-method-editor input,
+.payment-method-editor select,
+.payment-method-editor textarea,
+.direct-checkout input,
+.direct-checkout select,
+.seller-order-card input,
+.seller-order-card textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+}
+.seller-order-card label.payment-confirm {
+  flex-direction: row;
+}
+.seller-order-card .payment-confirm input {
+  width: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  height: 20px;
+  padding: 0;
+}
+@media (max-width: 480px) {
+  .payment-method-editor .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
