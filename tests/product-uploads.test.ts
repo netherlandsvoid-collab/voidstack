@@ -185,3 +185,77 @@ test("real TUS client sends 6 MB chunks, resumes a failed chunk, then verifies a
   assert.equal(publicItem.fileId, undefined);
   assert.equal(publicItem.downloadFile, undefined);
 });
+
+test("signed product uploads reject the ordinary route and mismatched tokens", async () => {
+  const cookie = await owner("signed_route_owner");
+  const file = new File([new Uint8Array(32)], "scene.blend", {
+    type: "application/octet-stream",
+  });
+  const r = await req("upload-init", ticketBody(file.size), cookie);
+  assert.equal(r.status, 200);
+  const ticket = await r.json();
+  const metadata = (path: string) =>
+    Object.entries({
+      bucketName: ticket.bucket,
+      objectName: path,
+      contentType: file.type,
+    })
+      .map(([key, value]) => `${key} ${Buffer.from(value).toString("base64")}`)
+      .join(",");
+  const send = (route: string, token: string, path = ticket.path) =>
+    fetch(
+      "https://fixture.storage.supabase.co/storage/v1/upload/resumable" + route,
+      {
+        method: "POST",
+        headers: {
+          apikey: "sb_publishable_fixture",
+          "x-signature": token,
+          "Tus-Resumable": "1.0.0",
+          "Upload-Length": String(file.size),
+          "Upload-Metadata": metadata(path),
+        },
+      },
+    );
+  assert.equal(
+    (await send("", ticket.token)).status,
+    403,
+    "a signed token is not a user JWT for the regular endpoint",
+  );
+  assert.equal(
+    (await send("/sign", "")).status,
+    403,
+    "signed endpoint requires a token",
+  );
+  assert.equal(
+    (await send("/sign", ticket.token, "another-owner/scene.bin")).status,
+    403,
+    "token cannot authorize another object",
+  );
+  await assert.rejects(
+    uploadResumable(
+      file,
+      { ...ticket, token: "invalid-signature" },
+      {
+        url: "https://fixture.supabase.co",
+        key: "sb_publishable_fixture",
+        type: file.type,
+      },
+      {},
+      { httpStack: tusFetchStack, retryDelays: [] },
+    ),
+    /authorization was rejected \(HTTP 403\)/,
+  );
+  await uploadResumable(
+    file,
+    ticket,
+    {
+      url: "https://fixture.supabase.co",
+      key: "sb_publishable_fixture",
+      type: file.type,
+    },
+    {},
+    { httpStack: tusFetchStack, retryDelays: [] },
+  );
+  const result = await req("upload-complete", { id: ticket.id }, cookie);
+  assert.equal(result.status, 200, await result.clone().text());
+});

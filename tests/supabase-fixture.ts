@@ -98,7 +98,18 @@ export function installSupabaseFixture() {
         const headers = new Headers(init?.headers);
         if (headers.get("apikey") !== "sb_publishable_fixture")
           return json({ message: "Invalid API key" }, 403);
-        let id = url.pathname.split("/")[5];
+        // Signed-upload tokens are accepted only on the signed TUS route.
+        // The ordinary route needs a user JWT/RLS permission, not x-signature.
+        const signedRoot = "/storage/v1/upload/resumable/sign";
+        if (
+          url.pathname !== signedRoot &&
+          !url.pathname.startsWith(signedRoot + "/")
+        )
+          return json(
+            { message: "new row violates row-level security policy" },
+            403,
+          );
+        let id = url.pathname.slice(signedRoot.length + 1);
         if (method === "POST") {
           const metadata = Object.fromEntries(
             (headers.get("upload-metadata") || "").split(",").map((part) => {
@@ -165,7 +176,7 @@ export function installSupabaseFixture() {
             "Tus-Resumable": "1.0.0",
             "Upload-Offset": String(upload.offset),
             Location:
-              "https://fixture.storage.supabase.co/storage/v1/upload/resumable/" +
+              "https://fixture.storage.supabase.co/storage/v1/upload/resumable/sign/" +
               id,
           },
         });
