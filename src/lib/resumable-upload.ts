@@ -20,7 +20,12 @@ export async function uploadResumable(
       ".supabase.co",
       ".storage.supabase.co",
     );
-  const endpoint = new URL("/storage/v1/upload/resumable", base).toString();
+  // createSignedUploadUrl tokens authorize the signed TUS route only. The
+  // ordinary route expects a user JWT and would apply anonymous RLS here.
+  const endpoint = new URL(
+    "/storage/v1/upload/resumable/sign",
+    base,
+  ).toString();
   if (options.signal?.aborted)
     throw new DOMException("Upload cancelled", "AbortError");
   return new Promise<void>((resolve, reject) => {
@@ -76,7 +81,9 @@ export async function uploadResumable(
             : undefined;
         finish(
           new Error(
-            `Upload interrupted${status ? ` (HTTP ${status})` : ""}. Check your connection, storage limit, and bucket settings, then retry.`,
+            status === 401 || status === 403
+              ? `Upload authorization was rejected (HTTP ${status}). Select the file again to request a fresh upload. If this continues, contact the site administrator.`
+              : `Upload interrupted${status ? ` (HTTP ${status})` : ""}. Check your connection, storage limit, and bucket settings, then retry.`,
           ),
         );
       },
