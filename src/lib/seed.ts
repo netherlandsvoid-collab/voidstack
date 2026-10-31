@@ -47,27 +47,37 @@ export const seedUsers = [
 ];
 export const seedPosts = [
   {
+    id: "p2",
+    userId: "alex",
+    title: "Move with intent.",
+    caption:
+      "Kinetic type, chrome and a little creative momentum. A motion design study.",
+    tags: ["Motion", "Graphic design"],
+    image: "/signal/kinetic-type.webp",
+    height: 330,
+    likes: 186,
+  },
+  {
     id: "p1",
     userId: "mila",
     title: "A study in soft forms",
     caption:
       "A little experiment in light, texture, and the space in between. Made with Blender & a lot of curiosity. ☁️",
     tags: ["3D art", "Exploration"],
-    image: "/studio/liquid-dreams.webp",
+    image: "/signal/iridescent-forms.webp",
     height: 410,
     productId: "d1",
     likes: 248,
   },
   {
-    id: "p2",
-    userId: "alex",
-    title: "Less, but better.",
-    caption:
-      "New visual identity explorations for an independent architecture studio. Finding the balance between structure and softness.",
-    tags: ["Branding", "Graphic design"],
-    image: "/studio/type-together.webp",
-    height: 330,
-    likes: 186,
+    id: "p4",
+    userId: "jules",
+    title: "Kinetic people",
+    caption: "An editorial exploration of type, movement and people.",
+    tags: ["Art direction", "Graphic design"],
+    image: "/signal/kinetic-people.webp",
+    height: 370,
+    likes: 152,
   },
   {
     id: "p3",
@@ -76,20 +86,9 @@ export const seedPosts = [
     caption:
       "A few frames from the coast. A reminder to take the long way home.",
     tags: ["Photography", "Nature"],
-    image: "/studio/quiet-geometry.webp",
+    image: "/signal/coastal-study.webp",
     height: 340,
     likes: 324,
-  },
-  {
-    id: "p4",
-    userId: "jules",
-    title: "Objects of a quieter kind",
-    caption:
-      "Warm light and honest materials. An ongoing collection of little things.",
-    tags: ["Art direction", "Product design"],
-    image: "/art/objects.svg",
-    height: 370,
-    likes: 152,
   },
   {
     id: "p5",
@@ -123,7 +122,7 @@ export const seedProducts = [
     price: 24,
     category: "3D assets",
     format: "BLEND · PDF",
-    image: "/studio/liquid-dreams.webp",
+    image: "/signal/iridescent-forms.webp",
     status: "published",
   },
   {
@@ -135,7 +134,7 @@ export const seedProducts = [
     price: 38,
     category: "Templates",
     format: "FIG · PDF",
-    image: "/studio/type-together.webp",
+    image: "/signal/kinetic-type.webp",
     status: "published",
   },
   {
@@ -147,7 +146,7 @@ export const seedProducts = [
     price: 16,
     category: "Photography",
     format: "XMP · PDF",
-    image: "/studio/quiet-geometry.webp",
+    image: "/signal/coastal-study.webp",
     status: "published",
   },
   {
