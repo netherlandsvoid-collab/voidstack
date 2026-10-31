@@ -1,0 +1,1316 @@
+/* Studio Signal: one layout, cobalt daylight and graphite/lime after dark.
+   The existing base sheets continue to own functional form and overlay rules. */
+:root {
+  --bg: #fff;
+  --surface: #fff;
+  --soft: #f4f5f7;
+  --hover: #eef1f8;
+  --text: #151619;
+  --muted: #626775;
+  --line: #e7e9ee;
+  --violet: #1748f5;
+  --violet-bg: #edf1ff;
+  --accent: #1748f5;
+  --accent-ink: #fff;
+  --accent-hover: #103bda;
+  --sidebar: 80px;
+  --radius: 12px;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0b0d0c;
+  --surface: #101310;
+  --soft: #191d18;
+  --hover: #21271d;
+  --text: #f3f3ed;
+  --muted: #a5aba2;
+  --line: #2a3028;
+  --violet: #d6ff62;
+  --violet-bg: #252e19;
+  --accent: #d6ff62;
+  --accent-ink: #101509;
+  --accent-hover: #c2ed49;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline-color: var(--accent);
+}
+.signal-shell {
+  min-height: 100dvh;
+}
+.signal-shell .sidebar {
+  width: var(--sidebar);
+  padding: 25px 15px 20px;
+  overflow: visible;
+  align-items: center;
+  border-color: var(--line);
+  background: var(--bg);
+}
+.rail-brand {
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -5px;
+  width: 48px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+  padding-right: 5px;
+}
+.signal-shell .sidebar nav {
+  width: 100%;
+  gap: 14px;
+}
+.signal-shell .sidebar .nav-item {
+  justify-content: center;
+  min-height: 48px;
+  width: 48px;
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--text);
+  position: relative;
+}
+.signal-shell .sidebar .nav-item > span:not(.avatar) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.signal-shell .sidebar .nav-item.active {
+  color: var(--accent);
+  background: var(--violet-bg);
+}
+.signal-shell .sidebar .nav-item.active > svg {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.signal-shell .sidebar .nav-item:hover,
+.sidebar-controls > button:hover {
+  background: var(--hover);
+}
+.signal-shell .sidebar .create-main,
+.signal-shell .workspace-label {
+  display: none;
+}
+.signal-shell .sidebar-bottom {
+  width: 48px;
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 22px;
+}
+.signal-shell .sidebar-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  order: 2;
+}
+.signal-shell .sidebar-controls > button {
+  width: 48px;
+  height: 44px;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 0;
+  padding: 10px;
+  border-radius: 10px;
+}
+.signal-shell .sidebar-controls > .icon-button {
+  font-size: inherit;
+}
+.signal-shell .sidebar-controls svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.signal-shell .sidebar .studio-profile {
+  order: 3;
+  padding: 6px;
+}
+.signal-shell .studio-footer {
+  display: none;
+}
+.signal-shell .nav-badge {
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+}
+.signal-shell .main-shell {
+  margin-left: var(--sidebar);
+}
+.signal-shell .main-shell .topbar {
+  height: 90px;
+  padding: 15px 28px;
+  gap: 28px;
+  background: var(--bg);
+  border: 0;
+  display: flex;
+  align-items: center;
+}
+.signal-wordmark {
+  display: flex;
+  align-items: baseline;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: -2.5px;
+  flex-shrink: 0;
+}
+.signal-wordmark > span {
+  color: var(--accent);
+  position: relative;
+}
+.signal-wordmark svg {
+  position: absolute;
+  top: -3px;
+  right: -14px;
+  stroke-width: 3;
+}
+.signal-shell .topbar-breadcrumb {
+  display: none;
+}
+.signal-shell .topbar-actions {
+  flex: 1;
+  gap: 20px;
+  margin-left: 12px;
+}
+.signal-shell .search-wrap {
+  flex: 1;
+  width: auto;
+  max-width: none;
+  height: 50px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 28px;
+  background: var(--soft);
+}
+.signal-shell .search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--violet-bg);
+}
+.signal-shell .search-wrap input {
+  font-size: 14px;
+  height: 48px;
+}
+.signal-shell .search-wrap input::placeholder {
+  color: var(--muted);
+}
+.signal-shell .search-wrap kbd {
+  display: none;
+}
+.signal-shell .search-wrap > svg {
+  width: 20px;
+  height: 20px;
+}
+.signal-shell .search-results {
+  top: calc(100% + 10px);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px #0002;
+  font-size: 14px;
+}
+.signal-shell .topbar-actions > .icon-button svg {
+  width: 23px;
+  height: 23px;
+}
+.signal-shell .top-avatar .avatar {
+  width: 44px;
+  height: 44px;
+}
+.signal-shell .main-shell .content-layout,
+.signal-shell .content-layout.wide-layout {
+  max-width: 1800px;
+  padding: 22px 28px 48px;
+}
+.signal-shell h1 {
+  font-size: clamp(32px, 3.4vw, 54px);
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+  font-weight: 850;
+}
+.signal-shell .page-heading {
+  margin-bottom: 26px;
+}
+.signal-shell .feed-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.signal-shell .feed-heading > div {
+  padding: 0;
+  min-width: 0;
+}
+.signal-shell .feed-heading h1 {
+  font-size: clamp(28px, 3.6vw, 58px);
+  margin: 0;
+  text-wrap: initial;
+}
+.signal-period {
+  color: var(--accent);
+}
+.signal-shell .signal-create {
+  flex-shrink: 0;
+  min-height: 52px;
+  padding: 12px 22px;
+}
+.signal-shell .button {
+  border-radius: 10px;
+  font-size: 14px;
+  box-shadow: none;
+}
+.signal-shell .button.primary,
+.send-button {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.signal-shell .button.primary:hover,
+.send-button:hover {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+.signal-shell .button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.signal-shell .signal-filters {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.signal-shell .signal-filters .feed-tabs {
+  border: 0;
+  margin: 0;
+  padding: 0 16px 0 0;
+  border-right: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.signal-shell .feed-tabs > div {
+  gap: 20px;
+}
+.signal-shell .feed-tabs button {
+  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 2px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.signal-shell .feed-tabs button.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.signal-shell .feed-tabs button.active:after {
+  display: none;
+}
+.signal-shell .signal-filters .category-row {
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: thin;
+}
+.signal-shell .category-row > button:not(.icon-button) {
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--muted);
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+}
+.signal-shell .category-row > button.selected {
+  color: var(--accent);
+  background: var(--violet-bg);
+}
+.signal-discovery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  align-items: start;
+  gap: 20px;
+}
+.signal-discovery.without-rail {
+  display: block;
+}
+.signal-feed {
+  min-width: 0;
+}
+.signal-shell .studio-post-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+.signal-shell .signal-post {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: none;
+}
+.signal-shell .signal-post .post-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 0 10px;
+  margin: 0;
+  min-height: 48px;
+}
+.signal-post .creator {
+  min-width: 0;
+  gap: 10px;
+  text-align: left;
+  padding: 0;
+}
+.signal-post .creator > span {
+  min-width: 0;
+}
+.signal-post .creator strong,
+.signal-post .creator small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.signal-post .creator strong {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  font-weight: 750;
+}
+.signal-post .creator small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.signal-post .avatar {
+  flex-shrink: 0;
+}
+.signal-shell .signal-post .post-identity .icon-button {
+  width: 36px;
+  height: 40px;
+  min-width: 36px;
+}
+.artwork-wrap {
+  position: relative;
+  min-width: 0;
+}
+.signal-shell .signal-post .artwork {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: auto !important;
+  width: 100%;
+  aspect-ratio: 1.44;
+  min-height: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--soft);
+  padding: 0;
+}
+.signal-shell .signal-post .artwork > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.signal-shell .signal-post video.artwork {
+  object-fit: contain;
+}
+.signal-shell .sample-art-label {
+  left: 8px;
+  bottom: 8px;
+  top: auto;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #101410d9;
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: 0.015em;
+  pointer-events: none;
+}
+.signal-shell .signal-post .post-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  margin: 3px 0 0;
+  min-height: 44px;
+}
+.signal-shell .signal-post .post-bottom > div {
+  gap: 4px;
+}
+.signal-shell .signal-post .post-bottom button {
+  gap: 7px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px;
+}
+.signal-shell .signal-post .post-bottom .liked,
+.signal-shell .signal-post .post-bottom .saved {
+  color: var(--accent);
+}
+.signal-post-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  color: var(--muted);
+  padding: 0 6px 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.signal-post-title svg {
+  flex-shrink: 0;
+}
+.signal-file-link {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  gap: 8px;
+  padding: 10px 6px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+}
+.signal-file-link > strong {
+  margin-left: auto;
+  font-size: 12px;
+}
+.discovery-rail {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 0;
+  background: var(--surface);
+}
+.rail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rail-heading h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.3;
+  letter-spacing: -0.7px;
+  font-weight: 800;
+}
+.rail-heading button {
+  color: var(--accent);
+  min-width: 44px;
+  min-height: 44px;
+}
+.discovery-creator {
+  padding-top: 22px;
+}
+.discovery-person {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.discovery-person-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+.discovery-person-link .avatar {
+  flex-shrink: 0;
+}
+.discovery-person-link > span {
+  min-width: 0;
+}
+.discovery-person-link strong,
+.discovery-person-link small {
+  display: block;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.discovery-person-link strong {
+  font-size: 13px;
+  font-weight: 750;
+}
+.discovery-person-link small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.signal-shell .follow-button {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.creator-work-strip {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 0 0 49px;
+}
+.creator-work-strip img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  min-width: 0;
+}
+.creator-work-strip > span {
+  width: 40px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: var(--soft);
+  border-radius: 6px;
+  color: var(--muted);
+}
+.creator-sample {
+  display: block;
+  margin: 5px 0 0 49px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.rail-resource {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.rail-product {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 16px 0 0;
+}
+.rail-product > img {
+  width: 72px;
+  height: 88px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.rail-product > span {
+  min-width: 0;
+}
+.rail-product strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.rail-product small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0;
+}
+.rail-product b {
+  display: block;
+  font-size: 13px;
+}
+.rail-product > svg {
+  display: none;
+}
+.rail-footnote {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  padding-top: 28px;
+}
+.signal-shell .feed-end {
+  padding: 22px 0 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.signal-shell .seed-note {
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+}
+.signal-shell .load-more {
+  margin: 24px auto;
+  display: flex;
+}
+.signal-shell .heading-spark {
+  color: var(--accent);
+}
+.signal-shell .market-banner {
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 16px;
+  min-height: 270px;
+}
+.signal-shell .market-banner h2 {
+  color: var(--text);
+  font-size: 36px;
+  letter-spacing: -1.5px;
+}
+.signal-shell .market-banner p,
+.signal-shell .market-banner .eyebrow {
+  color: var(--muted);
+}
+.signal-shell .dark-button {
+  color: var(--bg);
+  background: var(--text);
+}
+.signal-shell .product-card {
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+.signal-shell .product-type {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.signal-shell .profile-cover {
+  background: var(--soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.signal-shell .profile-cover .cover-flower {
+  color: var(--accent);
+}
+.signal-shell .profile-cover > span {
+  color: var(--text);
+}
+.signal-shell .messenger,
+.signal-shell .notification-list,
+.signal-shell .orders-list > div,
+.signal-shell .stats-grid > div {
+  border-radius: var(--radius);
+  border-color: var(--line);
+}
+.signal-shell .message-bubble.outgoing {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.signal-shell .message-bubble.outgoing small {
+  color: inherit;
+}
+.signal-shell .conversation.active {
+  background: var(--violet-bg);
+}
+.signal-shell .modal-backdrop {
+  background: #0008;
+  backdrop-filter: blur(6px);
+}
+.signal-shell .modal {
+  border-radius: 18px;
+  box-shadow: 0 24px 100px #0004;
+}
+.signal-shell .settings-tabs {
+  border-radius: 12px;
+}
+.signal-shell .settings-tabs > button[aria-selected="true"] {
+  box-shadow: none;
+  color: var(--accent);
+}
+.signal-shell .error-box {
+  background: #fff0f0;
+  color: #9e2438;
+}
+[data-theme="dark"] .signal-shell .error-box {
+  background: #321a20;
+  color: #ffb6c3;
+}
+.signal-shell .progress-track > div,
+.signal-shell .upload-progress {
+  background-color: var(--accent);
+}
+.signal-shell .toast {
+  box-shadow: 0 10px 32px #0002;
+}
+.signal-shell .signal-skeleton {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.signal-skeleton .skeleton-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  gap: 14px;
+}
+.signal-skeleton .skeleton-author {
+  width: 55%;
+  height: 32px;
+  margin: 0;
+}
+.signal-skeleton .skeleton-art {
+  aspect-ratio: 1.44;
+  border-radius: 8px;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .signal-shell .signal-post:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--line);
+  }
+  .signal-post .artwork > img {
+    transition: transform 360ms var(--ease-out);
+  }
+  .signal-post .artwork:hover > img {
+    transform: scale(1.025);
+  }
+  .signal-shell .product-card:hover {
+    box-shadow: 0 8px 24px #0001;
+    border-color: var(--line);
+    transform: translateY(-3px);
+  }
+}
+@media (min-width: 1600px) {
+  .signal-discovery {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 26px;
+  }
+  .signal-shell .main-shell .topbar,
+  .signal-shell .main-shell .content-layout {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  .signal-shell .studio-post-grid {
+    gap: 22px;
+  }
+}
+@media (max-width: 1200px) {
+  .signal-shell .feed-heading h1 {
+    max-width: 720px;
+    font-size: 40px;
+  }
+  .signal-discovery {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 16px;
+  }
+  .discovery-rail {
+    padding: 14px;
+  }
+  .discovery-person-link .avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .discovery-person-link small {
+    max-width: 95px;
+  }
+  .creator-work-strip {
+    padding-left: 0;
+  }
+  .creator-sample {
+    margin-left: 0;
+  }
+}
+@media (min-width: 761px) and (max-width: 1050px) {
+  .signal-discovery {
+    display: block;
+  }
+  .discovery-rail {
+    display: none;
+  }
+  .signal-shell .feed-heading h1 {
+    font-size: 38px;
+  }
+  .signal-shell .main-shell .topbar {
+    gap: 18px;
+    padding: 16px 24px;
+  }
+  .signal-wordmark {
+    font-size: 32px;
+  }
+  .signal-shell .topbar-actions {
+    gap: 12px;
+  }
+  .signal-shell .main-shell .content-layout {
+    padding: 20px 24px 48px;
+  }
+  .signal-shell .feed-heading {
+    align-items: flex-start;
+  }
+  .signal-shell .signal-create {
+    padding: 10px 14px;
+    min-height: 46px;
+  }
+  .signal-shell .signal-filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .signal-shell .signal-filters .category-row {
+    flex-basis: 100%;
+  }
+  .signal-shell .signal-filters .feed-tabs {
+    border-right: 0;
+  }
+}
+@media (max-width: 760px) {
+  :root {
+    --sidebar: 0px;
+  }
+  html {
+    scroll-padding-top: 140px;
+  }
+  .signal-shell .main-shell {
+    margin-left: 0;
+  }
+  .signal-shell .main-shell .topbar {
+    height: auto;
+    min-height: 128px;
+    padding: 16px 18px 12px;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    column-gap: 12px;
+    row-gap: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .signal-shell .topbar-breadcrumb {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0;
+  }
+  .signal-shell .header-location {
+    display: none;
+  }
+  .signal-shell .topbar-breadcrumb .mobile-menu {
+    display: flex;
+    width: 36px;
+    min-width: 36px;
+    height: 40px;
+  }
+  .signal-wordmark {
+    font-size: 31px;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .signal-wordmark svg {
+    width: 16px;
+    top: -3px;
+    right: -10px;
+  }
+  .signal-shell .topbar-actions {
+    display: contents;
+  }
+  .signal-shell .top-avatar {
+    grid-row: 1;
+    grid-column: 3;
+    margin: 0;
+  }
+  .signal-shell .top-avatar .avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .signal-shell .topbar-actions > .icon-button {
+    display: none;
+  }
+  .signal-shell .search-wrap {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    margin: 0;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 24px;
+  }
+  .signal-shell .search-wrap input {
+    height: 42px;
+    font-size: 16px;
+  }
+  .signal-shell .search-results {
+    width: 100%;
+  }
+  .signal-shell .main-shell .content-layout,
+  .signal-shell .content-layout.wide-layout {
+    padding: 22px 16px calc(94px + env(safe-area-inset-bottom));
+  }
+  .signal-shell .feed-heading {
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .signal-shell .feed-heading h1 {
+    font-size: clamp(29px, 7.4vw, 42px);
+    line-height: 1.15;
+    max-width: 500px;
+  }
+  .signal-shell .signal-create {
+    font-size: 0;
+    min-height: 44px;
+    width: 44px;
+    padding: 10px;
+    margin-top: 1px;
+    gap: 0;
+  }
+  .signal-shell .signal-create svg {
+    width: 24px;
+    height: 24px;
+  }
+  .signal-shell .signal-filters {
+    display: block;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .signal-shell .signal-filters .feed-tabs {
+    border: 0;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+  .signal-shell .feed-tabs button {
+    font-size: 14px;
+  }
+  .signal-shell .signal-filters .category-row {
+    display: flex;
+    max-width: 100%;
+  }
+  .signal-shell .category-row > button:not(.icon-button) {
+    min-height: 44px;
+    padding: 10px 13px;
+  }
+  .signal-discovery {
+    display: block;
+  }
+  .discovery-rail {
+    margin-top: 22px;
+    padding: 20px;
+  }
+  .creator-discovery {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .signal-shell .studio-post-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .signal-shell .signal-post {
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .signal-post .creator strong {
+    font-size: 14px;
+  }
+  .signal-post .creator small {
+    font-size: 12px;
+  }
+  .signal-shell .signal-post .post-identity .icon-button {
+    width: 44px;
+    min-width: 44px;
+  }
+  .signal-shell .signal-post .post-bottom button {
+    font-size: 14px;
+  }
+  .signal-post-title {
+    font-size: 13px;
+  }
+  .signal-shell .signal-skeleton {
+    grid-template-columns: 1fr;
+  }
+  .signal-shell .sidebar {
+    width: min(300px, calc(100vw - 48px));
+    padding: 24px 20px;
+    align-items: stretch;
+    gap: 0;
+    overflow-y: auto;
+  }
+  .signal-shell .sidebar .rail-brand {
+    width: auto;
+    justify-content: flex-start;
+    margin: 0 0 22px 10px;
+    padding: 0;
+    letter-spacing: -1px;
+  }
+  .signal-shell .sidebar .rail-brand .sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    overflow: visible;
+    margin: 0;
+  }
+  .signal-shell .sidebar .drawer-close {
+    display: flex;
+    position: absolute;
+    right: 16px;
+    top: 20px;
+  }
+  .signal-shell .sidebar nav {
+    gap: 5px;
+  }
+  .signal-shell .sidebar .nav-item {
+    justify-content: flex-start;
+    width: 100%;
+    gap: 14px;
+  }
+  .signal-shell .sidebar .nav-item > span:not(.avatar) {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    overflow: visible;
+  }
+  .signal-shell .sidebar .create-main {
+    display: flex;
+    margin-top: 18px;
+  }
+  .signal-shell .sidebar-bottom {
+    width: 100%;
+    align-items: stretch;
+    padding-top: 20px;
+  }
+  .signal-shell .sidebar-controls {
+    flex-direction: row;
+    justify-content: space-between;
+    order: 0;
+  }
+  .signal-shell .sidebar-controls > button {
+    width: auto;
+    font-size: 14px;
+    padding: 10px;
+  }
+  .signal-shell .sidebar .studio-profile {
+    order: 0;
+  }
+  .signal-shell .studio-footer {
+    display: flex;
+    font-size: 12px;
+  }
+  .signal-shell .studio-footer button {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    min-height: 44px;
+  }
+  .signal-shell .mobile-bottom {
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    box-shadow: none;
+    min-height: 64px;
+  }
+  .signal-shell .mobile-bottom > button.active {
+    color: var(--accent);
+  }
+  .signal-shell .mobile-bottom > button.create-mobile {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 12px;
+  }
+  .signal-shell .market-banner {
+    padding: 24px;
+    min-height: 260px;
+  }
+  .signal-shell .market-banner h2 {
+    font-size: 28px;
+    max-width: 70%;
+  }
+  .signal-shell .market-banner-art {
+    max-width: 47%;
+  }
+  .signal-shell .modal {
+    border-radius: 20px 20px 0 0;
+  }
+  .signal-shell .modal input:not([hidden]),
+  .signal-shell .modal textarea,
+  .signal-shell .modal select {
+    font-size: 16px;
+  }
+}
+@media (min-width: 540px) and (max-width: 760px) {
+  .signal-shell .studio-post-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-shell *,
+  .signal-shell *::before,
+  .signal-shell *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Explicit widths override the legacy compact follow icon. */
+.signal-shell .follow-button {
+  width: auto;
+  min-width: 66px;
+  height: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+}
+.signal-shell .discovery-person-link small {
+  font-size: 12px;
+}
+.signal-shell .discovery-person-link {
+  flex: 1;
+}
+.signal-shell .discovery-person-link strong {
+  font-size: 14px;
+}
+.signal-shell .signal-post .post-bottom .liked {
+  color: var(--accent) !important;
+}
+.signal-shell .text-art {
+  background: var(--soft);
+  color: var(--text);
+}
+.signal-shell .sidebar .nav-notifications {
+  display: none;
+}
+.signal-shell .sidebar {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.signal-shell .sidebar-bottom > .nav-item,
+.signal-shell .sidebar-controls {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .signal-shell .follow-button {
+    min-height: 44px;
+    height: 44px;
+  }
+  .signal-shell .sidebar .nav-notifications {
+    display: flex;
+  }
+}
+.signal-shell .support-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.signal-shell .support-links button {
+  min-height: 44px;
+  padding: 8px 12px;
+  color: var(--accent);
+  background: var(--violet-bg);
+  border-radius: 8px;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .signal-shell .topbar-breadcrumb::after {
+    content: none;
+    display: none;
+  }
+  .signal-shell .top-avatar {
+    display: flex;
+  }
+  .signal-shell .mobile-bottom > button.active {
+    background: transparent;
+    color: var(--accent);
+  }
+  .signal-shell .mobile-bottom > button:last-child {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+}
+.signal-shell label:focus-within {
+  outline: none;
+}
+.signal-shell .upload-zone:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.signal-shell .creator-work-strip img {
+  flex-shrink: 1;
+}
+.signal-shell .studio-post-grid {
+  align-items: start;
+}
+.signal-shell .feed-heading h1 {
+  font-size: clamp(28px, 3.9vw, 58px);
+}
+.signal-shell .signal-file-link {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: auto;
+  max-width: 75%;
+  min-height: 32px;
+  padding: 6px 9px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  gap: 6px;
+}
+.signal-file-link > span {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signal-file-link > strong {
+  white-space: nowrap;
+}
+.signal-shell .signal-file-link > svg:first-child {
+  display: none;
+}
+@media (min-width: 761px) and (max-width: 1200px) {
+  .signal-shell .feed-heading h1 {
+    font-size: 38px;
+  }
+}
+@media (max-width: 760px) {
+  .signal-shell .feed-heading h1 {
+    font-size: clamp(29px, 7.4vw, 42px);
+  }
+  .signal-shell .signal-file-link {
+    min-height: 44px;
+  }
+}
+.signal-shell .artwork-wrap:has(video) .signal-file-link {
+  top: 8px;
+  bottom: auto;
+}
+.signal-shell .artwork-wrap:has(video) .sample-art-label {
+  top: 8px;
+  bottom: auto;
+}
+.recovery-page .button.primary:hover {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+.recovery-page .modal {
+  border-radius: 18px;
+  box-shadow: 0 16px 60px #0002;
+}

@@ -8,6 +8,7 @@ import DirectCheckout from "@/components/DirectCheckout";
 import SellerOrderReview from "@/components/SellerOrderReview";
 import { currencies, money, orderStatus } from "@/lib/payment-methods";
 import SettingsTabs, { type SettingsTab } from "@/components/SettingsTabs";
+import DiscoveryRail from "@/components/DiscoveryRail";
 import FeedSkeleton from "@/components/FeedSkeleton";
 import { usePresence, useOverlayFocus } from "@/hooks/use-overlay";
 import AccountSettings from "@/components/AccountSettings";
@@ -50,6 +51,7 @@ import {
   FileText,
   ShieldCheck,
   Loader2,
+  LifeBuoy,
 } from "lucide-react";
 type Item = Record<string, any>;
 const categories = [
@@ -86,7 +88,8 @@ function Avatar({ user, size = 36 }: { user?: Item; size?: number }) {
         width: size,
         height: size,
         fontSize: size * 0.34,
-        background: user?.color || "#e7e0f4",
+        background: user?.color || "var(--soft)",
+        color: user?.color ? "#151619" : "var(--text)",
       }}
     >
       {user?.name
@@ -195,10 +198,12 @@ export default function App() {
       pendingPageFocus.current = false;
     }
   }, [page, dialogPresence.value, navigationPresence.value]);
+  const [themeReady, setThemeReady] = useState(false);
+  const [compactNavigation, setCompactNavigation] = useState(false);
   const [sellDownload, setSellDownload] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [feedFiltersOpen, setFeedFiltersOpen] = useState(false);
+
   const productsById = new Map<string, Item>(
     (data.products as Item[]).map((p) => [p.id, p]),
   );
@@ -246,8 +251,10 @@ export default function App() {
     window.addEventListener("focus", resume);
     const desktop = window.matchMedia("(min-width: 761px)");
     const closeMobileNavigation = () => {
+      setCompactNavigation(!desktop.matches);
       if (desktop.matches) setMobileNav(false);
     };
+    closeMobileNavigation();
     desktop.addEventListener("change", closeMobileNavigation);
     const initial = new URLSearchParams(location.search);
     if (["login", "recover"].includes(initial.get("auth") || "")) {
@@ -271,7 +278,8 @@ export default function App() {
       setProfileId(initial.get("profile")!);
       setPage("profile");
     }
-    setDark(localStorage.getItem("nexirel-theme") === "dark");
+    setDark(document.documentElement.dataset.theme === "dark");
+    setThemeReady(true);
     return () => {
       clearInterval(timer);
       refreshController.current?.abort();
@@ -292,9 +300,12 @@ export default function App() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
   useEffect(() => {
+    if (!themeReady) return;
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    localStorage.setItem("nexirel-theme", dark ? "dark" : "light");
-  }, [dark]);
+    try {
+      localStorage.setItem("nexirel-theme", dark ? "dark" : "light");
+    } catch {}
+  }, [dark, themeReady]);
   async function api(action: string, body: Item = {}) {
     const res = await fetch("/api/" + action, {
       method: "POST",
@@ -589,155 +600,117 @@ export default function App() {
       </article>
     );
   }
-  function postCard(p: Item, featured = false) {
+  function postCard(p: Item) {
     const sale = productsById.get(p.productId);
     const author = user(p.userId),
       liked = data.likes.includes(p.id),
       saved = data.saved.includes(p.id);
     return (
-      <article
-        className={`post-card ${featured ? "featured-post" : ""}`}
-        key={p.id}
-        style={{ order: posts.findIndex((x) => x.id === p.id) }}
-      >
-        <button
-          className="artwork"
-          onClick={() => {
-            open("post", p);
-            history.replaceState(null, "", `?post=${p.id}`);
-          }}
-          aria-label={`View ${p.title}`}
-          style={featured ? undefined : { height: p.height || 350 }}
-        >
-          {p.image ? (
-            data.mediaTypes?.[p.image]?.startsWith("video/") ? (
-              <video src={p.image} controls preload="metadata" playsInline />
-            ) : (
-              <img
-                src={p.image}
-                alt={p.title}
-                loading={featured ? "eager" : "lazy"}
-                decoding="async"
-              />
-            )
+      <article className="post-card signal-post" key={p.id}>
+        <div className="post-identity">
+          <button className="creator" onClick={() => profile(p.userId)}>
+            <Avatar user={author} size={36} />
+            <span>
+              <strong>{author?.name || "Creator"}</strong>
+              <small>
+                {author?.discipline?.split(" & ")[0] || "Independent creator"}
+              </small>
+            </span>
+          </button>
+          <IconButton
+            label={`Options for ${p.title}`}
+            onClick={() => open("options", p)}
+          >
+            <MoreHorizontal size={20} />
+          </IconButton>
+        </div>
+        <div className="artwork-wrap">
+          {data.mediaTypes?.[p.image]?.startsWith("video/") ? (
+            <video
+              className="artwork"
+              src={p.image}
+              controls
+              preload="metadata"
+              playsInline
+              aria-label={p.title}
+            />
           ) : (
-            <div className="text-art">{p.caption}</div>
+            <button
+              className="artwork"
+              onClick={() => {
+                open("post", p);
+                history.replaceState(null, "", `?post=${p.id}`);
+              }}
+              aria-label={`View ${p.title}`}
+            >
+              {p.image ? (
+                <img
+                  src={p.image}
+                  alt={p.title}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <div className="text-art">{p.caption}</div>
+              )}
+            </button>
           )}
           {p.seed && <span className="sample-art-label">Sample work</span>}
-          <span className="art-arrow">
-            <ArrowUpRight size={20} />
-          </span>
-        </button>
-        <div className="post-content">
-          <div className="post-identity">
-            <button className="creator" onClick={() => profile(p.userId)}>
-              <Avatar user={author} size={33} />
-              <span>
-                <strong>{author?.name}</strong>
-                <small>{author?.discipline?.split(" & ")[0]}</small>
-              </span>
-              {p.userId === "mila" && (
-                <span className="verified">
-                  <Check size={9} />
-                </span>
-              )}
-            </button>
-            <IconButton label="Post options" onClick={() => open("options", p)}>
-              <MoreHorizontal size={20} />
-            </IconButton>
-          </div>
-          <button
-            className="post-title text-button"
-            onClick={() => open("post", p)}
-          >
-            {p.title}
-          </button>
-          <p className="post-caption">{p.caption}</p>
-          {featured && (
-            <div className="featured-discipline">
-              {p.tags?.slice(0, 2).join(" / ")}
-            </div>
-          )}
           {sale?.status === "published" && (
-            <div className="post-download">
-              {featured && (
-                <span className="download-label">Featured in this post</span>
-              )}
-              <button
-                className="download-preview"
-                onClick={() => open("product", sale)}
-                aria-label={`View download ${sale.title}`}
-              >
-                {sale.image && <img src={sale.image} alt="" />}
-                <span>
-                  <strong>{sale.title}</strong>
-                  <small>{sale.format || sale.category}</small>
-                </span>
-              </button>
-              <div className="download-cta">
-                <strong>{money(sale.price, sale.currency)}</strong>
-                <button
-                  className="button primary sale-link"
-                  onClick={() => open("product", sale)}
-                >
-                  View download <ArrowUpRight size={15} />
-                </button>
-              </div>
-            </div>
-          )}
-          {featured && !sale && (
             <button
-              className="text-button featured-open"
+              className="signal-file-link"
+              aria-label={`View download ${sale.title}, ${money(sale.price, sale.currency)}`}
+              onClick={() => open("product", sale)}
+            >
+              <span>{sale.format || "Digital download"}</span>
+              <strong>{money(sale.price, sale.currency)}</strong>
+              <ArrowUpRight size={15} />
+            </button>
+          )}
+        </div>
+        <div className="post-bottom">
+          <div>
+            <button
+              aria-label={liked ? "Unlike post" : "Like post"}
+              aria-pressed={liked}
+              className={liked ? "liked" : ""}
+              onClick={() => action("like", { target: p.id })}
+            >
+              <Heart size={21} fill={liked ? "currentColor" : "none"} />
+              <span>{(p.likes || 0) + (liked ? 1 : 0)}</span>
+            </button>
+            <button
+              aria-label={`View comments on ${p.title}`}
               onClick={() => open("post", p)}
             >
-              Join the conversation <ArrowUpRight size={17} />
+              <MessageCircle size={21} />
+              <span>
+                {data.comments.filter((c: Item) => c.target === p.id).length ||
+                  ""}
+              </span>
             </button>
-          )}
-          <div className="post-bottom">
-            <div>
-              <button
-                aria-label={liked ? "Unlike post" : "Like post"}
-                aria-pressed={liked}
-                className={liked ? "liked" : ""}
-                onClick={() => action("like", { target: p.id })}
-              >
-                <Heart size={17} fill={liked ? "currentColor" : "none"} />
-                <span>{(p.likes || 0) + (liked ? 1 : 0)}</span>
-              </button>
-              <button
-                aria-label="View comments"
-                onClick={() => open("post", p)}
-              >
-                <MessageCircle size={17} />
-                <span>
-                  {data.comments.filter((c: Item) => c.target === p.id)
-                    .length || ""}
-                </span>
-              </button>
-            </div>
-            <IconButton
-              label={saved ? "Unsave post" : "Save post"}
-              pressed={saved}
-              className={saved ? "saved" : ""}
-              onClick={() =>
-                action(
-                  "save",
-                  { target: p.id },
-                  saved
-                    ? "Removed from saved"
-                    : "Saved for a little inspiration later",
-                )
-              }
-            >
-              <Bookmark size={18} fill={saved ? "currentColor" : "none"} />
-            </IconButton>
           </div>
+          <IconButton
+            label={saved ? "Unsave post" : "Save post"}
+            pressed={saved}
+            className={saved ? "saved" : ""}
+            onClick={() =>
+              action(
+                "save",
+                { target: p.id },
+                saved ? "Removed from saved" : "Saved to your collection",
+              )
+            }
+          >
+            <Bookmark size={21} fill={saved ? "currentColor" : "none"} />
+          </IconButton>
         </div>
       </article>
     );
   }
+
   return (
-    <div className="app-shell studio-shell">
+    <div className="app-shell studio-shell signal-shell">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -753,18 +726,18 @@ export default function App() {
       <aside
         id="main-navigation"
         ref={navigationRef}
-        inert={!!dialogPresence.value}
+        inert={
+          !!dialogPresence.value ||
+          (compactNavigation && !navigationPresence.value)
+        }
         className={`sidebar ${navigationPresence.value ? "mobile-open" : ""} ${navigationPresence.exiting ? "is-exiting" : ""}`}
         role={navigationPresence.value ? "dialog" : undefined}
         aria-modal={navigationPresence.value ? true : undefined}
         tabIndex={-1}
         aria-label="Main navigation"
       >
-        <a href="/" className="wordmark">
-          <span className="brand-symbol">
-            n<Asterisk size={19} aria-hidden="true" />
-          </span>
-          nexirel<span className="brand-dot">.</span>
+        <a href="/" className="rail-brand" aria-label="Nexirel home">
+          N<span className="sr-only">exirel</span>
         </a>
         <button
           className="drawer-close icon-button"
@@ -775,25 +748,25 @@ export default function App() {
         </button>
         <div className="workspace-label">THE CREATIVE COMMUNITY</div>
         <nav>
-          {navs
-            .filter((n) => n.id !== "notifications")
-            .map((n) => (
-              <button
-                key={n.id}
-                aria-current={page === n.id ? "page" : undefined}
-                className={`nav-item ${page === n.id ? "active" : ""}`}
-                onClick={() => go(n.id)}
-              >
-                <n.icon size={20} strokeWidth={page === n.id ? 2 : 1.65} />
-                <span>{n.label}</span>
-                {n.id === "messages" && unread > 0 && (
-                  <b className="nav-badge">{unread}</b>
-                )}
-                {n.id === "notifications" && unseen > 0 && (
-                  <span className="notification-dot" />
-                )}
-              </button>
-            ))}
+          {navs.map((n) => (
+            <button
+              key={n.id}
+              title={n.label}
+              aria-label={n.label}
+              aria-current={page === n.id ? "page" : undefined}
+              className={`nav-item nav-${n.id} ${page === n.id ? "active" : ""}`}
+              onClick={() => go(n.id)}
+            >
+              <n.icon size={20} strokeWidth={page === n.id ? 2 : 1.65} />
+              <span>{n.label}</span>
+              {n.id === "messages" && unread > 0 && (
+                <b className="nav-badge">{unread}</b>
+              )}
+              {n.id === "notifications" && unseen > 0 && (
+                <span className="notification-dot" />
+              )}
+            </button>
+          ))}
         </nav>
         <button
           className="button primary create-main"
@@ -804,6 +777,8 @@ export default function App() {
         <div className="sidebar-bottom">
           <button
             className="nav-item studio-profile"
+            aria-label={me ? "Your profile" : "Sign in or join"}
+            title={me ? "Your profile" : "Sign in or join"}
             onClick={() => (me ? profile(me.id) : open("auth"))}
           >
             <Avatar user={me || { name: "You" }} size={34} />
@@ -813,7 +788,11 @@ export default function App() {
             </span>
           </button>
           <div className="sidebar-controls">
-            <button onClick={() => (me ? open("settings") : open("auth"))}>
+            <button
+              aria-label="Settings"
+              title="Settings"
+              onClick={() => (me ? open("settings") : open("auth"))}
+            >
               <Settings size={17} /> Settings
             </button>
             <IconButton
@@ -822,17 +801,34 @@ export default function App() {
             >
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </IconButton>
+            <IconButton label="About and help" onClick={() => open("help")}>
+              <LifeBuoy size={20} />
+            </IconButton>
           </div>
           <button
             className="nav-item"
+            title="Creator studio"
+            aria-label="Creator studio"
             onClick={() => (me ? go("seller") : open("auth"))}
           >
             <Grid2X2 size={19} />
             <span>Creator studio</span>
           </button>
+          <button
+            className="nav-item"
+            title="Your purchases"
+            aria-label="Your purchases"
+            onClick={() => (me ? go("downloads") : open("auth"))}
+          >
+            <Download size={20} />
+            <span>Purchases</span>
+          </button>
           <div className="studio-footer">
             <button onClick={() => open("about")}>About</button>
-            <button onClick={() => open("help")}>Help</button>
+            <button title="Help" aria-label="Help" onClick={() => open("help")}>
+              <LifeBuoy size={18} />
+              <span>Help</span>
+            </button>
             <button onClick={() => open("privacy")}>Privacy</button>
           </div>
         </div>
@@ -842,6 +838,12 @@ export default function App() {
         inert={!!dialogPresence.value || !!navigationPresence.value}
       >
         <header className="topbar">
+          <a href="/" className="signal-wordmark" aria-label="Nexirel home">
+            nexirel
+            <span>
+              .<Asterisk size={21} aria-hidden="true" />
+            </span>
+          </a>
           <div className="topbar-breadcrumb">
             <IconButton
               label={mobileNav ? "Close navigation" : "Open navigation"}
@@ -869,7 +871,7 @@ export default function App() {
               <Search size={17} />
               <input
                 aria-label="Search Nexirel"
-                placeholder="Search for inspiration, creators or downloads…"
+                placeholder="Find your next inspiration"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -957,227 +959,151 @@ export default function App() {
             {["home", "explore", "saved"].includes(page) && (
               <>
                 <div className="page-heading feed-heading">
-                  <button
-                    className="feed-filter-toggle"
-                    aria-label="Filter feed"
-                    aria-expanded={feedFiltersOpen}
-                    aria-controls="feed-filters"
-                    onClick={() => setFeedFiltersOpen(!feedFiltersOpen)}
-                  >
-                    <SlidersHorizontal size={17} />
-                    <span>Filter feed</span>
-                  </button>
                   <div>
-                    <div className="eyebrow">
-                      {page === "saved" ? "YOUR COLLECTION" : "COMMUNITY FEED"}
-                    </div>
                     <h1>
                       {page === "saved"
-                        ? "Your inspiration, collected."
+                        ? "Your inspiration, collected"
                         : page === "explore"
-                          ? "Follow your curiosity."
-                          : "Made to stand out."}
-                      <Asterisk
-                        className="heading-spark"
-                        size={45}
-                        aria-hidden="true"
-                      />
+                          ? "Find your next inspiration"
+                          : "Where ideas find their people"}
+                      <span className="signal-period">.</span>
                     </h1>
-                    <p>
-                      {page === "saved"
-                        ? "The work you love, ready when you need a spark."
-                        : "Discover inspiring work, talented creators and unique digital downloads."}
+                    <p className="sr-only">
+                      Discover inspiring work, connect with creators, and find
+                      your next creative tool.
                     </p>
                   </div>
+                  <button
+                    className="button primary signal-create"
+                    onClick={() => (me ? open("create") : open("auth"))}
+                  >
+                    <Plus size={21} />
+                    Create post
+                  </button>
                 </div>
-                {(category !== "For you" || tab === "Following" || query) && (
-                  <div className="active-feed-filter">
-                    <span>
-                      {query
-                        ? `Search: ${query}`
-                        : category !== "For you"
-                          ? category
-                          : "Following"}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setCategory("For you");
-                        setTab("Discover");
-                        setQuery("");
-                      }}
+                {page !== "saved" && (
+                  <div className="signal-filters" aria-label="Feed filters">
+                    <div className="feed-tabs">
+                      <div>
+                        {["Discover", "Following"].map((t) => (
+                          <button
+                            key={t}
+                            aria-pressed={tab === t}
+                            className={tab === t ? "active" : ""}
+                            onClick={() => {
+                              setTab(t);
+                              setLimit(6);
+                            }}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div
+                      className="category-row"
+                      aria-label="Creative disciplines"
                     >
-                      Clear filters <X size={13} />
+                      {categories.map((c) => (
+                        <button
+                          key={c}
+                          aria-pressed={category === c}
+                          className={category === c ? "selected" : ""}
+                          onClick={() => {
+                            setCategory(c);
+                            setLimit(6);
+                          }}
+                        >
+                          {c === "For you"
+                            ? "All"
+                            : c === "Graphic design"
+                              ? "Design"
+                              : c === "3D art"
+                                ? "3D"
+                                : c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {query && (
+                  <div className="active-feed-filter">
+                    <span>Search: {query}</span>
+                    <button onClick={() => setQuery("")}>
+                      Clear search
+                      <X size={14} />
                     </button>
                   </div>
                 )}
-                {loading ? (
-                  <FeedSkeleton />
-                ) : posts.length ? (
-                  <>
-                    {page !== "saved" && postCard(posts[0], true)}
-                    {page === "home" &&
-                      products.length > 0 &&
-                      !query &&
-                      category === "For you" &&
-                      tab === "Discover" && (
-                        <section
-                          className="download-shelf"
-                          aria-label="Digital downloads"
-                        >
-                          <div className="shelf-heading">
-                            <div>
-                              <h2>Downloads worth opening</h2>
-                              <p>Digital assets from independent creators.</p>
-                            </div>
-                            <button
-                              className="text-button"
-                              onClick={() => {
-                                setCategory("For you");
-                                go("marketplace");
-                              }}
-                            >
-                              Browse marketplace <ArrowRight size={17} />
-                            </button>
-                          </div>
-                          <div className="shelf-products">
-                            {products.slice(0, 2).map((product: Item) => (
-                              <button
-                                key={product.id}
-                                className="shelf-product"
-                                onClick={() => open("product", product)}
-                              >
-                                {product.image && (
-                                  <img src={product.image} alt="" />
-                                )}
-                                <span>
-                                  <strong>{product.title}</strong>
-                                  <small>
-                                    {product.seed ? "Sample resource · " : ""}
-                                    {product.format || product.category}
-                                  </small>
-                                </span>
-                                <b>{money(product.price, product.currency)}</b>
-                                <ChevronRight size={20} />
-                              </button>
-                            ))}
-                          </div>
-                        </section>
-                      )}
-                    {page !== "saved" && feedFiltersOpen && (
-                      <section id="feed-filters" aria-label="Feed filters">
-                        <div className="feed-tabs">
-                          <div>
-                            {["Discover", "Following"].map((t) => (
-                              <button
-                                className={tab === t ? "active" : ""}
-                                key={t}
-                                onClick={() => {
-                                  setTab(t);
-                                  setLimit(6);
-                                }}
-                              >
-                                {t}
-                                {t === "Discover" && (
-                                  <Sparkles
-                                    className="tab-spark"
-                                    size={14}
-                                    aria-hidden="true"
-                                  />
-                                )}
-                                {t === "Following" &&
-                                  data.follows.length > 0 && (
-                                    <span className="count">
-                                      {data.follows.length}
-                                    </span>
-                                  )}
-                              </button>
-                            ))}
-                          </div>
-                          <span className="feed-label">
-                            <span /> A fresh perspective, every day
-                          </span>
+                <div
+                  className={`signal-discovery ${page === "saved" ? "without-rail" : ""}`}
+                >
+                  <div className="signal-feed">
+                    {loading ? (
+                      <FeedSkeleton />
+                    ) : posts.length ? (
+                      <>
+                        <div className="studio-post-grid">
+                          {posts.slice(0, limit).map((p) => postCard(p))}
                         </div>
-                        <div className="category-row">
-                          {categories.map((c) => (
-                            <button
-                              className={category === c ? "selected" : ""}
-                              onClick={() => {
-                                setCategory(c);
-                                setLimit(6);
-                              }}
-                              key={c}
-                            >
-                              {c === "For you" && <Sparkles size={13} />} {c}
-                            </button>
-                          ))}
-                          <IconButton
-                            label="Reset filters"
-                            onClick={() => {
-                              setCategory("For you");
-                              setTab("Discover");
-                              tell(
-                                "Showing the latest posts from every discipline.",
-                              );
-                            }}
+                        {posts.length > limit ? (
+                          <button
+                            className="button secondary load-more"
+                            onClick={() => setLimit(limit + 6)}
                           >
-                            <SlidersHorizontal size={16} />
-                          </IconButton>
-                        </div>
-                      </section>
-                    )}
-                    <div className="studio-post-grid">
-                      {posts
-                        .slice(page === "saved" ? 0 : 1, limit)
-                        .map((post) => postCard(post))}
-                    </div>
-                    {posts.length > limit ? (
-                      <button
-                        className="button load-more"
-                        onClick={() => setLimit(limit + 6)}
-                      >
-                        A little more inspiration <ArrowRight size={16} />
-                      </button>
+                            More inspiration
+                            <ArrowRight size={16} />
+                          </button>
+                        ) : (
+                          <p className="feed-end">
+                            You’re all caught up. Go make something good.
+                          </p>
+                        )}
+                      </>
                     ) : (
-                      <p className="feed-end">
-                        You’re all caught up. Go make something good.{" "}
-                        <Asterisk size={16} aria-hidden="true" />
-                      </p>
+                      empty(
+                        page === "saved"
+                          ? "Keep a little inspiration."
+                          : tab === "Following"
+                            ? "Find your creative people."
+                            : "No work here just yet.",
+                        page === "saved"
+                          ? "Bookmark work you love and find it here."
+                          : tab === "Following"
+                            ? "Follow creators to see their work here."
+                            : "Try another discipline or search.",
+                        "Explore all work",
+                        () => {
+                          setTab("Discover");
+                          setCategory("For you");
+                          setQuery("");
+                          if (page === "saved") go("explore");
+                        },
+                      )
                     )}
-                  </>
-                ) : (
-                  <>
-                    {page !== "saved" && (
-                      <div className="empty-filter-reset">
-                        <button
-                          className="button secondary"
-                          onClick={() => {
-                            setCategory("For you");
-                            setTab("Discover");
-                            setQuery("");
-                          }}
-                        >
-                          Show all posts
-                        </button>
-                      </div>
-                    )}
-                    {empty(
-                      page === "saved"
-                        ? "Keep a little inspiration."
-                        : "A fresh start.",
-                      page === "saved"
-                        ? "Tap the bookmark on any post to find it here."
-                        : tab === "Following"
-                          ? "Follow a few creators and their latest work will appear here."
-                          : "Try another creative discipline or search.",
-                      "Explore creators",
-                      () => {
-                        setTab("Discover");
-                        setCategory("For you");
-                        go("explore");
-                      },
-                    )}
-                  </>
-                )}
+                  </div>
+                  {page !== "saved" && !loading && (
+                    <DiscoveryRail
+                      users={users.map(
+                        ({ id, name, avatar, seed, discipline }) => ({
+                          id,
+                          name,
+                          avatar,
+                          seed,
+                          discipline,
+                        }),
+                      )}
+                      posts={data.posts}
+                      products={data.products}
+                      following={data.follows}
+                      currentUserId={me?.id}
+                      onProfile={profile}
+                      onFollow={(id) => action("follow", { target: id })}
+                      onProduct={(p) => open("product", p)}
+                      onMarketplace={() => go("marketplace")}
+                    />
+                  )}
+                </div>
                 <div className="seed-note">
                   Sample work is labeled. Your posts appear in the same feed.
                 </div>
@@ -1217,7 +1143,7 @@ export default function App() {
                   </div>
                   <img
                     className="market-banner-art"
-                    src="/studio/liquid-dreams.webp"
+                    src="/signal/iridescent-forms.webp"
                     alt="Iridescent liquid chrome sculpture"
                   />
                 </div>
@@ -1431,7 +1357,8 @@ export default function App() {
                 <div className="page-heading">
                   <div className="eyebrow">A LITTLE CONNECTION</div>
                   <h1>
-                    Conversations<span className="heading-spark">↗</span>
+                    Conversations
+                    <ArrowUpRight className="heading-spark" size={32} />
                   </h1>
                   <p>Share an idea. Start something together.</p>
                 </div>
@@ -1681,7 +1608,8 @@ export default function App() {
                   <div>
                     <div className="eyebrow">YOUR IDEAS, OUT IN THE WORLD</div>
                     <h1>
-                      Creator studio<span className="heading-spark">✻</span>
+                      Creator studio
+                      <Asterisk className="heading-spark" size={32} />
                     </h1>
                     <p>A little space to build your independent business.</p>
                   </div>
@@ -2956,6 +2884,14 @@ export default function App() {
                         : "A little help along the way."}
                 </h2>
                 <div className="prose">
+                  <div className="support-links">
+                    <button onClick={() => open("about")}>About</button>
+                    <button onClick={() => open("help")}>Help</button>
+                    <button onClick={() => open("guidelines")}>
+                      Community guidelines
+                    </button>
+                    <button onClick={() => open("privacy")}>Privacy</button>
+                  </div>
                   {dialogPresence.value === "about" ? (
                     <>
                       <p>
