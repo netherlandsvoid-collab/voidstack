@@ -184,7 +184,7 @@ export default function App() {
     dialogPresence.value || navigationPresence.value,
     dialogPresence.value ? modalRef : navigationRef,
     () => {
-      setModal("");
+      if (dialogPresence.value) closeDialog();
       setMobileNav(false);
     },
   );
@@ -329,6 +329,20 @@ export default function App() {
       tell((e as Error).message);
     }
   }
+  function closeDialog() {
+    setModal("");
+    history.replaceState(null, "", "/");
+  }
+  async function copyPostLink(id: string) {
+    const link = new URL("/", location.origin);
+    link.searchParams.set("post", id);
+    try {
+      await navigator.clipboard.writeText(link.href);
+      tell("Post link copied.");
+    } catch {
+      tell("Copy this post link: " + link.href);
+    }
+  }
   function open(name: string, item: Item | null = null) {
     if (name === "auth" && loading) {
       tell("Loading your account… Please try again in a moment.");
@@ -350,6 +364,7 @@ export default function App() {
     setSellDownload(false);
   }
   function go(id: string) {
+    history.replaceState(null, "", "/");
     pendingPageFocus.current = true;
     setPage(id);
     if (id !== page) setCategory("For you");
@@ -1352,6 +1367,19 @@ export default function App() {
                 )}
               </>
             )}
+            {page === "profile" &&
+              !currentProfile &&
+              !loadError &&
+              (loading ? (
+                <p role="status">Loading profile…</p>
+              ) : (
+                empty(
+                  "Creator unavailable.",
+                  "This profile may have been removed, or the link may be incorrect.",
+                  "Explore creators",
+                  () => go("explore"),
+                )
+              ))}
             {page === "messages" && (
               <>
                 <div className="page-heading">
@@ -1865,14 +1893,13 @@ export default function App() {
           className={`modal-backdrop ${dialogPresence.exiting ? "is-exiting" : ""}`}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setModal("");
-              history.replaceState(null, "", "/");
+              closeDialog();
             }
           }}
         >
           <div
             ref={modalRef}
-            className={`modal ${["post", "product"].includes(dialogPresence.value) ? "detail-modal" : ""}`}
+            className={`modal ${dialogPresence.value === "product" || (dialogPresence.value === "post" && currentPost) ? "detail-modal" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -1901,8 +1928,7 @@ export default function App() {
               label="Close dialog"
               className="modal-close"
               onClick={() => {
-                setModal("");
-                history.replaceState(null, "", "/");
+                closeDialog();
               }}
             >
               <X size={20} />
@@ -2407,6 +2433,12 @@ export default function App() {
                     <div className="detail-actions">
                       <button
                         className={`button secondary ${data.likes.includes(currentPost.id) ? "liked" : ""}`}
+                        aria-label={
+                          data.likes.includes(currentPost.id)
+                            ? "Unlike post"
+                            : "Like post"
+                        }
+                        aria-pressed={data.likes.includes(currentPost.id)}
                         onClick={() =>
                           action("like", { target: currentPost.id })
                         }
@@ -2416,7 +2448,15 @@ export default function App() {
                           (data.likes.includes(currentPost.id) ? 1 : 0)}
                       </button>
                       <IconButton
-                        label="Save post"
+                        label={
+                          data.saved.includes(currentPost.id)
+                            ? "Unsave post"
+                            : "Save post"
+                        }
+                        pressed={data.saved.includes(currentPost.id)}
+                        className={
+                          data.saved.includes(currentPost.id) ? "saved" : ""
+                        }
                         onClick={() =>
                           action(
                             "save",
@@ -2425,25 +2465,18 @@ export default function App() {
                           )
                         }
                       >
-                        <Bookmark size={18} />
+                        <Bookmark
+                          size={18}
+                          fill={
+                            data.saved.includes(currentPost.id)
+                              ? "currentColor"
+                              : "none"
+                          }
+                        />
                       </IconButton>
                       <button
                         className="text-button"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(
-                              `${location.origin}/?post=${currentPost.id}`,
-                            );
-                            tell("Post link copied.");
-                          } catch {
-                            tell(
-                              "Share this URL: " +
-                                location.origin +
-                                "/?post=" +
-                                currentPost.id,
-                            );
-                          }
-                        }}
+                        onClick={() => copyPostLink(currentPost.id)}
                       >
                         Share <ArrowUpRight size={16} />
                       </button>
@@ -2494,7 +2527,32 @@ export default function App() {
                   </div>
                 </>
               ) : (
-                <p>Loading post...</p>
+                <div className="unavailable-post">
+                  {loading ? (
+                    <p role="status">Loading post…</p>
+                  ) : loadError ? (
+                    <>
+                      <h2>Couldn’t load this post.</h2>
+                      <p className="muted" role="alert">
+                        {loadError}
+                      </p>
+                      <button className="button primary" onClick={refresh}>
+                        Try again
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h2>Post unavailable.</h2>
+                      <p className="muted">
+                        This post may have been deleted, or the link may be
+                        incorrect.
+                      </p>
+                      <button className="button primary" onClick={closeDialog}>
+                        Back to browsing
+                      </button>
+                    </>
+                  )}
+                </div>
               ))}
             {dialogPresence.value === "options" && selected && (
               <>
@@ -2502,11 +2560,8 @@ export default function App() {
                 <div className="settings-links">
                   <button
                     onClick={async () => {
-                      await navigator.clipboard.writeText(
-                        `${location.origin}/?post=${selected.id}`,
-                      );
-                      tell("Link copied");
-                      setModal("");
+                      await copyPostLink(selected.id);
+                      closeDialog();
                     }}
                   >
                     <ArrowUpRight size={17} /> Copy post link
@@ -2541,12 +2596,16 @@ export default function App() {
                       </button>
                       <button
                         onClick={async () => {
-                          await action(
+                          if (!me) {
+                            open("auth");
+                            return;
+                          }
+                          const result = await action(
                             "block",
                             { target: selected.userId },
                             "Block preference updated",
                           );
-                          setModal("");
+                          if (result) closeDialog();
                         }}
                       >
                         <ShieldCheck size={17} /> Block / unblock creator
