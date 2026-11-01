@@ -307,3 +307,47 @@ test("paid product files redirect directly to storage after order and session ch
   assert.match(authorized.headers.get("location")!, /download=project.zip/);
   assert.equal((await download(stranger.cookie)).status, 403);
 });
+
+test("profile banners persist across state refreshes and accept only owned public images", async () => {
+  const owner = await account("banner_owner");
+  const other = await account("banner_other");
+  const file = await uploadDirect(jpeg(32), false, api(owner.cookie));
+  const foreign = await uploadDirect(jpeg(32), false, api(other.cookie));
+  const privateImage = await uploadDirect(jpeg(32), true, api(owner.cookie));
+  const save = (banner: unknown) =>
+    request("profile", { name: "Banner owner", banner }, owner.cookie);
+  assert.equal((await save(file.url)).status, 200);
+  const state = await GET(
+    new Request("https://app.test/api/state", {
+      headers: { cookie: owner.cookie },
+    }),
+    context("state"),
+  );
+  const data = await state.json();
+  assert.equal(data.me.banner, file.url);
+  assert.equal(
+    data.users.find((u: any) => u.id === owner.user.id).banner,
+    file.url,
+  );
+  for (const rejected of [
+    foreign.url,
+    privateImage.url,
+    "https://example.com/banner.jpg",
+    "/api/media/missing",
+  ])
+    assert.notEqual((await save(rejected)).status, 200);
+  const preserved = await request(
+    "profile",
+    { name: "Updated name" },
+    owner.cookie,
+  );
+  assert.equal((await preserved.json()).banner, file.url);
+  assert.equal((await save("")).status, 200);
+  const removed = await GET(
+    new Request("https://app.test/api/state", {
+      headers: { cookie: owner.cookie },
+    }),
+    context("state"),
+  );
+  assert.equal((await removed.json()).me.banner, "");
+});

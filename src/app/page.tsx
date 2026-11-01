@@ -175,6 +175,7 @@ export default function App() {
     [authMode, setAuthMode] = useState("register"),
     [media, setMedia] = useState<string[]>([]),
     [fileId, setFileId] = useState(""),
+    [banner, setBanner] = useState(""),
     [preview, setPreview] = useState(""),
     [messageText, setMessageText] = useState(""),
     [messageImage, setMessageImage] = useState("");
@@ -371,7 +372,8 @@ export default function App() {
     }
     setError("");
     setMedia(item?.media || []);
-    setPreview(item?.image || "");
+    setPreview(name === "settings" ? me?.avatar || "" : item?.image || "");
+    setBanner(name === "settings" ? me?.banner || "" : "");
     setFileId("");
     setSellDownload(false);
   }
@@ -428,6 +430,7 @@ export default function App() {
         const result = await upload(f, type === "file" || type === "message");
         if (type === "file") setFileId(result.id);
         else if (type === "preview") setPreview(result.url);
+        else if (type === "banner") setBanner(result.url);
         else if (type === "message") setMessageImage(result.url);
         else setMedia((m) => [...m, result.url].slice(0, 6));
       }
@@ -492,7 +495,7 @@ export default function App() {
         go("seller");
         tell("Your listing has been saved.");
       } else if (modal === "settings") {
-        await api("profile", { ...b, avatar: preview });
+        await api("profile", { ...b, avatar: preview, banner });
         setModal("");
         await refresh();
         tell("Profile updated.");
@@ -1237,16 +1240,35 @@ export default function App() {
             {page === "profile" && currentProfile && (
               <>
                 <div className="profile-cover">
-                  <span>
-                    Ideas are better
-                    <br />
-                    when they’re shared.
-                  </span>
-                  <Asterisk
-                    className="cover-flower"
-                    size={90}
-                    aria-hidden="true"
-                  />
+                  {currentProfile.banner ? (
+                    <img
+                      className="profile-banner"
+                      src={currentProfile.banner}
+                      alt={`${currentProfile.name}'s profile banner`}
+                    />
+                  ) : (
+                    <>
+                      <span>
+                        Ideas are better
+                        <br />
+                        when they’re shared.
+                      </span>
+                      <Asterisk
+                        className="cover-flower"
+                        size={90}
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
+                  {me?.id === profileId && (
+                    <button
+                      type="button"
+                      className="button secondary profile-banner-edit"
+                      onClick={() => open("settings")}
+                    >
+                      <ImagePlus size={16} /> Change banner
+                    </button>
+                  )}
                 </div>
                 <div className="profile-info">
                   <Avatar user={currentProfile} size={88} />
@@ -2268,6 +2290,36 @@ export default function App() {
                         height={60}
                         alt="Profile preview"
                       />
+                    )}
+                    <label>
+                      Profile banner
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={busy}
+                        onChange={(e) => handleUpload(e.target.files, "banner")}
+                      />
+                      <span className="fine-print">
+                        JPG, PNG or WebP · up to 10 MB. Wide images work best;
+                        edges may be cropped.
+                      </span>
+                    </label>
+                    {banner && (
+                      <div>
+                        <img
+                          className="profile-banner-preview"
+                          src={banner}
+                          alt="Banner preview"
+                        />
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={busy}
+                          onClick={() => setBanner("")}
+                        >
+                          Remove banner
+                        </button>
+                      </div>
                     )}
                     <div className="form-grid">
                       <label>

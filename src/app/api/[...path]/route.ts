@@ -344,6 +344,26 @@ async function handlePOST(
         throw new Error(
           "Choose a unique username with 3–24 letters, numbers or underscores.",
         );
+      let banner = u.banner || "";
+      if (b.banner !== undefined) {
+        if (b.banner === "") banner = "";
+        else {
+          const match =
+            typeof b.banner === "string" &&
+            /^\/api\/media\/([a-f0-9]{32})$/.exec(b.banner);
+          const file = match ? await get("media", match[1]) : null;
+          if (
+            !file ||
+            file.userId !== u.id ||
+            file.private ||
+            !["image/jpeg", "image/png", "image/webp"].includes(file.type)
+          )
+            throw new Error(
+              "Choose a banner image uploaded to your own account.",
+            );
+          banner = b.banner;
+        }
+      }
       return ok(
         await publicUser(
           await put("user", {
@@ -355,6 +375,7 @@ async function handlePOST(
             website: /^https?:\/\//.test(b.website)
               ? String(b.website).slice(0, 250)
               : "",
+            banner,
             avatar:
               typeof b.avatar === "string" && b.avatar.startsWith("/api/media/")
                 ? b.avatar
