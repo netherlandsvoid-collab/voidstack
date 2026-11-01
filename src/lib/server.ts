@@ -78,6 +78,35 @@ export async function all(kind: string): Promise<any[]> {
   const ids = new Set(rows.map((r) => r.id));
   return [...(samples[kind] || []).filter((r) => !ids.has(r.id)), ...rows];
 }
+// Fetch a state snapshot in paginated batches rather than one request per kind.
+// This is request-local: never cache private account data across requests.
+export async function allMany(kinds: string[]): Promise<Record<string, any[]>> {
+  const grouped: Record<string, any[]> = Object.fromEntries(
+    kinds.map((kind) => [kind, []]),
+  );
+  if (!kinds.length) return grouped;
+  const client = database();
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await client
+      .from("voidstack_records")
+      .select("kind,id,data")
+      .in("kind", kinds)
+      .order("kind")
+      .order("id")
+      .range(offset, offset + 999);
+    if (error) databaseError(error);
+    for (const row of data!) grouped[row.kind].push(row.data);
+    if (data!.length < 1000) break;
+  }
+  for (const kind of kinds) {
+    const ids = new Set(grouped[kind].map((row) => row.id));
+    grouped[kind] = [
+      ...(samples[kind] || []).filter((row) => !ids.has(row.id)),
+      ...grouped[kind],
+    ];
+  }
+  return grouped;
+}
 export async function get(kind: string, id: string): Promise<any> {
   const { data, error } = await database()
     .from("voidstack_records")

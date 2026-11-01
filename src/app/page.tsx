@@ -1,17 +1,23 @@
 "use client";
 import { useEffect, useState, useRef, useDeferredValue } from "react";
 import { readApiResponse } from "@/lib/api-response";
-import { uploadDirect } from "@/lib/direct-upload";
-import ProductFilePicker from "@/components/ProductFilePicker";
-import SellerPaymentSettings from "@/components/SellerPaymentSettings";
-import DirectCheckout from "@/components/DirectCheckout";
-import SellerOrderReview from "@/components/SellerOrderReview";
+import dynamic from "next/dynamic";
+const ProductFilePicker = dynamic(
+  () => import("@/components/ProductFilePicker"),
+);
+const SellerPaymentSettings = dynamic(
+  () => import("@/components/SellerPaymentSettings"),
+);
+const DirectCheckout = dynamic(() => import("@/components/DirectCheckout"));
+const SellerOrderReview = dynamic(
+  () => import("@/components/SellerOrderReview"),
+);
 import { currencies, money, orderStatus } from "@/lib/payment-methods";
 import SettingsTabs, { type SettingsTab } from "@/components/SettingsTabs";
 import DiscoveryRail from "@/components/DiscoveryRail";
 import FeedSkeleton from "@/components/FeedSkeleton";
 import { usePresence, useOverlayFocus } from "@/hooks/use-overlay";
-import AccountSettings from "@/components/AccountSettings";
+const AccountSettings = dynamic(() => import("@/components/AccountSettings"));
 import {
   Asterisk,
   ArrowUpRight,
@@ -79,6 +85,8 @@ function Avatar({ user, size = 36 }: { user?: Item; size?: number }) {
       src={user.avatar}
       width={size}
       height={size}
+      loading="lazy"
+      decoding="async"
       alt={user.name || "Creator"}
     />
   ) : (
@@ -217,7 +225,9 @@ export default function App() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 4500);
   };
-  const refresh = async () => {
+  const refresh = async (background = false) => {
+    // Focus and timer refreshes must not restart an already slow request.
+    if (background && refreshController.current) return;
     refreshController.current?.abort();
     const controller = new AbortController();
     refreshController.current = controller;
@@ -235,6 +245,8 @@ export default function App() {
     } catch (e) {
       if (!controller.signal.aborted) setLoadError((e as Error).message);
     } finally {
+      if (refreshController.current === controller)
+        refreshController.current = null;
       if (!controller.signal.aborted) setLoading(false);
     }
   };
@@ -242,10 +254,10 @@ export default function App() {
     refresh();
     const resume = () => {
       if (!document.hidden && Date.now() - lastRefresh.current > 2000)
-        refresh();
+        refresh(true);
     };
     const timer = setInterval(() => {
-      if (!document.hidden) refresh();
+      if (!document.hidden) refresh(true);
     }, 30000);
     document.addEventListener("visibilitychange", resume);
     window.addEventListener("focus", resume);
@@ -400,6 +412,7 @@ export default function App() {
     action("read", { from: id });
   }
   async function upload(file: File, privateFile = false) {
+    const { uploadDirect } = await import("@/lib/direct-upload");
     const result = await uploadDirect(file, privateFile, api);
     setData((d) => ({
       ...d,
@@ -645,7 +658,7 @@ export default function App() {
               className="artwork"
               src={p.image}
               controls
-              preload="metadata"
+              preload="none"
               playsInline
               aria-label={p.title}
             />
@@ -1849,7 +1862,7 @@ export default function App() {
             {loadError && !modal && (
               <div className="error-box" role="alert">
                 {loadError}
-                <button onClick={refresh}>Retry</button>
+                <button onClick={() => refresh()}>Retry</button>
               </div>
             )}
           </main>
@@ -2536,7 +2549,10 @@ export default function App() {
                       <p className="muted" role="alert">
                         {loadError}
                       </p>
-                      <button className="button primary" onClick={refresh}>
+                      <button
+                        className="button primary"
+                        onClick={() => refresh()}
+                      >
                         Try again
                       </button>
                     </>

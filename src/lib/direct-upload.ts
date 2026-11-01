@@ -1,10 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
 import {
   MEDIA_MAX_BYTES,
   formatBytes,
   uploadContentType,
 } from "./upload-limits";
-import { uploadResumable, type TransferOptions } from "./resumable-upload";
+import type { TransferOptions } from "./resumable-upload";
 export async function uploadDirect(
   file: File,
   privateFile: boolean,
@@ -33,6 +32,15 @@ export async function uploadDirect(
     throw new Error(
       "File storage is not configured. Please contact the site administrator.",
     );
+  if (product) {
+    const { uploadResumable } = await import("./resumable-upload");
+    await uploadResumable(file, ticket, { url, key, type }, options);
+    options.onProgress?.(99);
+    const result = await api("upload-complete", { id: ticket.id });
+    options.onProgress?.(100);
+    return { ...result, name: file.name, size: file.size };
+  }
+  const { createClient } = await import("@supabase/supabase-js");
   // Isolated, stateless client: the scoped signed token authorizes this one path.
   // No server secret or app authentication cookies are sent to the browser.
   const storage = createClient(url, key, {
@@ -42,13 +50,6 @@ export async function uploadDirect(
       detectSessionInUrl: false,
     },
   });
-  if (product) {
-    await uploadResumable(file, ticket, { url, key, type }, options);
-    options.onProgress?.(99);
-    const result = await api("upload-complete", { id: ticket.id });
-    options.onProgress?.(100);
-    return { ...result, name: file.name, size: file.size };
-  }
   const { error } = await storage.storage
     .from(ticket.bucket)
     .uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: type });

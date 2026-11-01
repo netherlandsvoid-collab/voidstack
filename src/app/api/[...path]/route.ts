@@ -18,6 +18,7 @@ import {
 import { NextResponse } from "next/server";
 import {
   all,
+  allMany,
   get,
   put,
   putMany,
@@ -67,18 +68,40 @@ async function handleGET(
         "message",
         "report",
       ];
-      const values = await Promise.all(kinds.map((kind) => all(kind)));
-      const records = Object.fromEntries(
-        kinds.map((kind, i) => [kind, values[i]]),
-      );
+      const publicKinds = [
+        "user",
+        "media",
+        "post",
+        "like",
+        "product",
+        "follow",
+        "comment",
+      ];
+      const requestedKinds = u
+        ? kinds.filter((kind) => kind !== "report" || u.role === "admin")
+        : publicKinds;
+      const records = {
+        ...Object.fromEntries(kinds.map((kind) => [kind, []])),
+        ...(await allMany(requestedKinds)),
+      };
       const followers = records.follow;
+      const followerCounts = new Map<string, number>();
+      for (const follow of followers)
+        followerCounts.set(
+          follow.target,
+          (followerCounts.get(follow.target) || 0) + 1,
+        );
+      const likeCounts = new Map<string, number>();
+      for (const like of records.like) {
+        if (like.userId !== u?.id)
+          likeCounts.set(like.target, (likeCounts.get(like.target) || 0) + 1);
+      }
       const exposeUser = (profile: any) => {
         if (!profile) return null;
         const { password, email, ...safe } = profile;
         return {
           ...safe,
-          followers: followers.filter((f: any) => f.target === profile.id)
-            .length,
+          followers: followerCounts.get(profile.id) || 0,
         };
       };
       const users = records.user.map(exposeUser);
@@ -103,11 +126,7 @@ async function handleGET(
           .filter((x: any) => !blocks.includes(x.userId))
           .map((p: any) => ({
             ...p,
-            likes:
-              (p.likes || 0) +
-              records.like.filter(
-                (l: any) => l.target === p.id && l.userId !== u?.id,
-              ).length,
+            likes: (p.likes || 0) + (likeCounts.get(p.id) || 0),
           }))
           .sort((a: any, b: any) => b.createdAt - a.createdAt),
         products: records.product
