@@ -4,6 +4,7 @@ export function installSupabaseFixture() {
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_fixture";
   process.env.SUPABASE_SECRET_KEY = "sb_secret_fixture";
   const records = new Map<string, any>();
+  const databaseReads: string[] = [];
   const accounts = new Map<string, any>();
   const storageObjects = new Map<string, { bytes: Buffer; type: string }>();
   const uploadTokens = new Map<string, string>();
@@ -250,7 +251,12 @@ export function installSupabaseFixture() {
     if (url.pathname.startsWith("/rest/v1/voidstack_records")) {
       if (new Headers(init?.headers).get("apikey") !== "sb_secret_fixture")
         return json({ message: "Permission denied" }, 403);
-      const kind = url.searchParams.get("kind")?.replace(/^eq\./, "");
+      const kindFilter = url.searchParams.get("kind") || "";
+      const allowedKinds = kindFilter.startsWith("in.(")
+        ? kindFilter.slice(4, -1).split(",")
+        : null;
+      const kind = allowedKinds ? undefined : kindFilter.replace(/^eq\./, "");
+      if (method === "GET") databaseReads.push(url.search);
       const id = url.searchParams.get("id")?.replace(/^eq\./, "");
       if (method === "POST") {
         if (Array.isArray(body)) {
@@ -288,8 +294,18 @@ export function installSupabaseFixture() {
         return new Response(null, { status: 204 });
       }
       let rows = [...records.values()]
-        .filter((r) => (!kind || r.kind === kind) && (!id || r.id === id))
-        .sort((a, b) => a.id.localeCompare(b.id));
+        .filter(
+          (r) =>
+            (allowedKinds
+              ? allowedKinds.includes(r.kind)
+              : !kind || r.kind === kind) &&
+            (!id || r.id === id),
+        )
+        .sort((a, b) =>
+          url.searchParams.get("order")?.startsWith("kind.")
+            ? a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id)
+            : a.id.localeCompare(b.id),
+        );
       const offset = Number(url.searchParams.get("offset") || 0),
         limit = Number(url.searchParams.get("limit") || 1000);
       rows = rows.slice(offset, offset + limit);
@@ -427,6 +443,7 @@ export function installSupabaseFixture() {
     storageObjects,
     emailRequests,
     recoveryRequests,
+    databaseReads,
     tusRequests,
     setFailNextPatch: () => {
       failNextPatch = true;
