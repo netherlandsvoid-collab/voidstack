@@ -1,4 +1,4 @@
-/* Studio Signal: one layout, cobalt daylight and cream/crimson after dark.
+/* Studio Signal: one layout, cobalt daylight and neutral charcoal/crimson after dark.
    The existing base sheets continue to own functional form and overlay rules. */
 :root {
   --bg: #fff;
@@ -19,17 +19,16 @@
   color-scheme: light;
 }
 [data-theme="dark"] {
-  /* Reference palette: lotus cream #feeee1, crimson #c31d2e,
-     blue charcoal #202f39. Lighter crimson keeps small labels readable. */
-  --bg: #141e25;
-  --surface: #202f39;
-  --soft: #263843;
-  --hover: #30434e;
+  /* Neutral dark surfaces; preserve the existing cream and crimson accents. */
+  --bg: #0c0c0c;
+  --surface: #161616;
+  --soft: #1f1f1f;
+  --hover: #292929;
   --text: #feeee1;
   --muted: #bdbbb6;
-  --line: #455660;
+  --line: #353535;
   --violet: #ff929a;
-  --violet-bg: #442b34;
+  --violet-bg: #252525;
   --accent: #c31d2e;
   --accent-ink: #feeee1;
   --accent-hover: #a91827;
