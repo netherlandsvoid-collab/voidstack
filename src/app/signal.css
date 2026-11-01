@@ -1336,3 +1336,46 @@ select:focus {
   border-radius: 18px;
   box-shadow: 0 16px 60px #0002;
 }
+
+/* Explicit dimensions prevent profile photos inheriting their source height. */
+.signal-shell .profile-info > .avatar {
+  width: 88px;
+  height: 88px;
+  min-width: 88px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.signal-shell .profile-cover {
+  position: relative;
+  overflow: hidden;
+}
+.signal-shell .profile-cover > .profile-banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-banner-edit {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.profile-banner-preview {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+@media (max-width: 760px) {
+  .signal-shell .profile-info > .avatar {
+    width: 75px;
+    height: 75px;
+    min-width: 75px;
+  }
+}
