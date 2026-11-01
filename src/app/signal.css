@@ -1,4 +1,4 @@
-/* Studio Signal: one layout, cobalt daylight and graphite/lime after dark.
+/* Studio Signal: one layout, cobalt daylight and cream/crimson after dark.
    The existing base sheets continue to own functional form and overlay rules. */
 :root {
   --bg: #fff;
@@ -13,25 +13,48 @@
   --accent: #1748f5;
   --accent-ink: #fff;
   --accent-hover: #103bda;
+  --accent-text: var(--accent);
   --sidebar: 80px;
   --radius: 12px;
   color-scheme: light;
 }
 [data-theme="dark"] {
-  --bg: #0b0d0c;
-  --surface: #101310;
-  --soft: #191d18;
-  --hover: #21271d;
-  --text: #f3f3ed;
-  --muted: #a5aba2;
-  --line: #2a3028;
-  --violet: #d6ff62;
-  --violet-bg: #252e19;
-  --accent: #d6ff62;
-  --accent-ink: #101509;
-  --accent-hover: #c2ed49;
+  /* Reference palette: lotus cream #feeee1, crimson #c31d2e,
+     blue charcoal #202f39. Lighter crimson keeps small labels readable. */
+  --bg: #141e25;
+  --surface: #202f39;
+  --soft: #263843;
+  --hover: #30434e;
+  --text: #feeee1;
+  --muted: #bdbbb6;
+  --line: #455660;
+  --violet: #ff929a;
+  --violet-bg: #442b34;
+  --accent: #c31d2e;
+  --accent-ink: #feeee1;
+  --accent-hover: #a91827;
+  --accent-text: #ff929a;
   color-scheme: dark;
 }
+[data-theme="dark"] .initials {
+  background: var(--soft) !important;
+  color: var(--text);
+}
+[data-theme="dark"] .payment-details,
+[data-theme="dark"] .community-card {
+  background: var(--soft);
+  border-color: var(--line);
+}
+[data-theme="dark"] .community-card h2 {
+  color: var(--text);
+}
+[data-theme="dark"] .post-bottom .liked {
+  color: var(--accent-text) !important;
+}
+[data-theme="dark"] .toast > svg {
+  color: var(--accent);
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -43,7 +66,7 @@ body {
 input:focus,
 textarea:focus,
 select:focus {
-  outline-color: var(--accent);
+  outline-color: var(--accent-text);
 }
 .signal-shell {
   min-height: 100dvh;
@@ -90,7 +113,7 @@ select:focus {
   clip-path: inset(50%);
 }
 .signal-shell .sidebar .nav-item.active {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--violet-bg);
 }
 .signal-shell .sidebar .nav-item.active > svg {
@@ -177,7 +200,7 @@ select:focus {
   flex-shrink: 0;
 }
 .signal-wordmark > span {
-  color: var(--accent);
+  color: var(--accent-text);
   position: relative;
 }
 .signal-wordmark svg {
@@ -205,7 +228,7 @@ select:focus {
   background: var(--soft);
 }
 .signal-shell .search-wrap:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--violet-bg);
 }
 .signal-shell .search-wrap input {
@@ -267,7 +290,7 @@ select:focus {
   text-wrap: initial;
 }
 .signal-period {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .signal-shell .signal-create {
   flex-shrink: 0;
@@ -323,7 +346,7 @@ select:focus {
 }
 .signal-shell .feed-tabs button.active {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--accent-text);
 }
 .signal-shell .feed-tabs button.active:after {
   display: none;
@@ -346,7 +369,7 @@ select:focus {
   border-radius: 10px;
 }
 .signal-shell .category-row > button.selected {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--violet-bg);
 }
 .signal-discovery {
@@ -478,7 +501,7 @@ select:focus {
 }
 .signal-shell .signal-post .post-bottom .liked,
 .signal-shell .signal-post .post-bottom .saved {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .signal-post-title {
   display: flex;
@@ -532,7 +555,7 @@ select:focus {
   font-weight: 800;
 }
 .rail-heading button {
-  color: var(--accent);
+  color: var(--accent-text);
   min-width: 44px;
   min-height: 44px;
 }
@@ -672,7 +695,7 @@ select:focus {
   display: flex;
 }
 .signal-shell .heading-spark {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .signal-shell .market-banner {
   background: var(--soft);
@@ -709,7 +732,7 @@ select:focus {
   border-radius: 16px;
 }
 .signal-shell .profile-cover .cover-flower {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .signal-shell .profile-cover > span {
   color: var(--text);
@@ -744,7 +767,7 @@ select:focus {
 }
 .signal-shell .settings-tabs > button[aria-selected="true"] {
   box-shadow: none;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .signal-shell .error-box {
   background: #fff0f0;
@@ -756,7 +779,7 @@ select:focus {
 }
 .signal-shell .progress-track > div,
 .signal-shell .upload-progress {
-  background-color: var(--accent);
+  background-color: var(--accent-text);
 }
 .signal-shell .toast {
   box-shadow: 0 10px 32px #0002;
@@ -1124,7 +1147,7 @@ select:focus {
     min-height: 64px;
   }
   .signal-shell .mobile-bottom > button.active {
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .signal-shell .mobile-bottom > button.create-mobile {
     background: var(--accent);
@@ -1218,7 +1241,7 @@ select:focus {
 .signal-shell .support-links button {
   min-height: 44px;
   padding: 8px 12px;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--violet-bg);
   border-radius: 8px;
   font-size: 13px;
@@ -1233,7 +1256,7 @@ select:focus {
   }
   .signal-shell .mobile-bottom > button.active {
     background: transparent;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .signal-shell .mobile-bottom > button:last-child {
     background: var(--accent);
