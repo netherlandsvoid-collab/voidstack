@@ -1448,3 +1448,458 @@ select:focus {
   color: var(--accent-ink);
   font-weight: 800;
 }
+
+/* Messaging owns its scroll area; the composer never participates in history scrolling. */
+.nx-messenger {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  height: min(740px, calc(100dvh - 240px));
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.nx-inbox {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+}
+.nx-inbox-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 20px 18px;
+}
+.nx-inbox-heading h2 {
+  font-size: 26px;
+  letter-spacing: -1px;
+  margin-top: 5px;
+}
+.nx-inbox-heading h2 > span {
+  color: var(--accent-text);
+}
+.nx-chat-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 16px 16px;
+  padding: 0 12px;
+  min-height: 44px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+}
+.nx-chat-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  padding: 10px 0;
+  outline: none;
+}
+.nx-chat-search:focus-within {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+.nx-conversation-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 0 8px 12px;
+}
+.nx-conversation {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 16px 12px;
+  margin: 3px 0;
+  border-radius: 12px;
+  text-align: left;
+  border: 1px solid transparent;
+}
+.nx-conversation:hover {
+  background: var(--hover);
+}
+.nx-conversation.selected {
+  background: var(--soft);
+  border-color: var(--line);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.nx-chat-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  max-width: none;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+}
+.nx-chat-initial {
+  background: var(--violet-bg);
+  color: var(--accent-text);
+  font-weight: 800;
+}
+.nx-conversation-copy {
+  min-width: 0;
+  flex: 1;
+}
+.nx-conversation-copy strong {
+  font-size: 13px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-conversation-copy small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 5px;
+}
+.nx-conversation-meta {
+  display: flex;
+  align-items: end;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.nx-conversation-meta b {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.nx-thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+.nx-thread-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  min-height: 78px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.nx-thread-heading > div {
+  min-width: 0;
+  flex: 1;
+}
+.nx-thread-heading strong {
+  display: block;
+  font-size: 14px;
+}
+.nx-thread-heading small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.nx-thread-heading > .icon-button:last-child {
+  margin-left: auto;
+}
+.nx-chat-back {
+  display: none;
+}
+.nx-stream {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  scrollbar-gutter: stable;
+}
+.nx-thread-intro {
+  text-align: center;
+  padding: 12px 0 24px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.nx-thread-intro > span {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  font-weight: 800;
+}
+.nx-thread-intro p {
+  margin-top: 8px;
+}
+.nx-message-group {
+  display: flow-root;
+}
+.nx-date-divider {
+  text-align: center;
+  clear: both;
+  margin: 12px 0 20px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.nx-date-divider time {
+  background: var(--soft);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.nx-message {
+  width: fit-content;
+  max-width: 82%;
+  margin: 0 auto 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  border-radius: 16px 16px 16px 4px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.nx-message.mine {
+  margin-left: auto;
+  margin-right: 0;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.nx-message p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nx-message small {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 9px;
+  opacity: 0.8;
+}
+.nx-message small > span {
+  display: inline-flex;
+}
+.nx-message img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+.nx-compose-dock {
+  flex: 0 0 auto;
+  padding: 14px 20px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.nx-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px;
+  background: var(--bg);
+}
+.nx-composer:focus-within {
+  border-color: var(--accent-text);
+}
+.nx-composer textarea {
+  min-width: 0;
+  flex: 1;
+  min-height: 42px;
+  max-height: 100px;
+  resize: vertical;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  padding: 10px 2px;
+  font-size: 14px;
+  line-height: 22px;
+}
+.nx-composer textarea:focus {
+  outline: none;
+}
+.nx-send,
+.nx-attach-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 11px;
+}
+.nx-send {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.nx-attach-button {
+  color: var(--muted);
+  overflow: hidden;
+  cursor: pointer;
+}
+.nx-attach-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.nx-attach-button:focus-within {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+.nx-composer-hint {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 8px;
+  text-align: center;
+}
+.nx-chat-error {
+  font-size: 12px;
+  color: var(--accent-text);
+  padding-bottom: 10px;
+}
+.nx-attachment {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.nx-attachment img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.nx-new-messages {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 20px;
+  padding: 9px 14px;
+  font-size: 11px;
+  box-shadow: 0 4px 20px #0002;
+}
+.nx-chat-empty {
+  padding: 28px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.nx-chat-empty p {
+  margin: 12px 0;
+}
+.nx-welcome {
+  margin: auto;
+  text-align: center;
+  padding: 30px;
+  max-width: 420px;
+}
+.nx-welcome-icon {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  color: var(--accent-text);
+  background: var(--soft);
+  transform: rotate(-7deg);
+}
+.nx-welcome h2 {
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin: 16px 0;
+}
+.nx-welcome p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .nx-messenger {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+  .nx-conversation-meta time {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .nx-messenger {
+    grid-template-columns: minmax(0, 1fr);
+    height: calc(var(--chat-viewport, 100dvh) - 195px);
+    min-height: 240px;
+    border-radius: 16px;
+  }
+  .nx-messenger:not(.nx-chat-active) .nx-thread,
+  .nx-chat-active .nx-inbox {
+    display: none;
+  }
+  .nx-thread-heading {
+    padding: 10px 12px;
+    min-height: 66px;
+    gap: 8px;
+  }
+  .nx-thread-heading strong {
+    font-size: 13px;
+  }
+  .nx-thread-heading small {
+    font-size: 10px;
+  }
+  .nx-chat-back {
+    display: inline-flex;
+  }
+  .nx-stream {
+    padding: 16px 12px;
+  }
+  .nx-message {
+    max-width: 88%;
+    font-size: 13px;
+  }
+  .nx-compose-dock {
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
+  }
+  .nx-composer textarea {
+    font-size: 16px;
+  }
+  .nx-composer-hint {
+    display: none;
+  }
+  .nx-conversation {
+    padding: 15px 12px;
+  }
+  .nx-inbox {
+    border: 0;
+  }
+}

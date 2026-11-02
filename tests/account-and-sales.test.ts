@@ -380,3 +380,36 @@ test("activity persists for returning users, stays private, and is read independ
     "self-interactions do not notify the owner",
   );
 });
+
+test("message state is chronological and restricted to the signed-in participants", async () => {
+  const sender = await account("chat_order_sender");
+  const receiver = await account("chat_order_receiver");
+  const outsider = await account("chat_order_outsider");
+  for (const [id, createdAt] of [
+    ["order_z", 100],
+    ["order_a", 300],
+    ["order_m", 200],
+  ] as const) {
+    fixture.records.set("message:" + id, {
+      kind: "message",
+      id,
+      data: {
+        id,
+        from: sender.id,
+        to: receiver.id,
+        text: id,
+        read: false,
+        createdAt,
+      },
+    });
+  }
+  for (const user of [sender, receiver]) {
+    const body = await (await state(user.cookie)).json();
+    assert.deepEqual(
+      body.messages.map((m: any) => m.id),
+      ["order_z", "order_m", "order_a"],
+    );
+  }
+  assert.deepEqual((await (await state(outsider.cookie)).json()).messages, []);
+  assert.deepEqual((await (await state()).json()).messages, []);
+});

@@ -178,7 +178,12 @@ async function handleGET(
               .map(publicOrder)
           : [],
         messages: u
-          ? records.message.filter((x: any) => x.from === u.id || x.to === u.id)
+          ? records.message
+              .filter((x: any) => x.from === u.id || x.to === u.id)
+              .sort(
+                (a: any, b: any) =>
+                  a.createdAt - b.createdAt || a.id.localeCompare(b.id),
+              )
           : [],
         reports: u?.role === "admin" ? records.report : [],
         adminUsers: u?.role === "admin" ? users : [],
