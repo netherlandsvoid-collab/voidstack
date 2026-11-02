@@ -272,3 +272,111 @@ test("sale posts reject invalid prices, missing previews and someone else's priv
   assert.equal(fixture.records.size, before);
   fixture.setFailBulk(false);
 });
+
+test("activity persists for returning users, stays private, and is read independently of chats", async () => {
+  const creator = await account("activity_creator");
+  const actor = await account("activity_actor");
+  const postResponse = await request(
+    "post",
+    { caption: "Activity test", media: [] },
+    creator.cookie,
+  );
+  const post = await postResponse.json();
+  assert.equal(postResponse.status, 200);
+  assert.equal(
+    (await request("follow", { target: creator.id }, actor.cookie)).status,
+    200,
+  );
+  assert.equal(
+    (await request("like", { target: post.id }, actor.cookie)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        "comment",
+        { target: post.id, text: "Lovely work" },
+        actor.cookie,
+      )
+    ).status,
+    200,
+  );
+  let items = (await (await state(creator.cookie)).json()).notifications;
+  assert.equal(items.length, 3);
+  assert.ok(
+    items.every(
+      (n: any) => !n.read && n.userId === creator.id && n.actorId === actor.id,
+    ),
+  );
+  assert.ok(items.some((n: any) => n.target === "profile:" + actor.id));
+  assert.ok(items.some((n: any) => n.target === "post:" + post.id));
+  assert.deepEqual(
+    (await (await state(actor.cookie)).json()).notifications,
+    [],
+  );
+  assert.deepEqual((await (await state()).json()).notifications, []);
+  // A chat read must never clear unrelated activity.
+  await request("read", { from: actor.id }, creator.cookie);
+  assert.equal(
+    (await (await state(creator.cookie)).json()).notifications.filter(
+      (n: any) => !n.read,
+    ).length,
+    3,
+  );
+  await request("notifications-read", { ids: [items[0].id] }, actor.cookie);
+  assert.equal(
+    (await (await state(creator.cookie)).json()).notifications.filter(
+      (n: any) => !n.read,
+    ).length,
+    3,
+  );
+  assert.equal(
+    (
+      await request(
+        "notifications-read",
+        { ids: [items[0].id] },
+        creator.cookie,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await (await state(creator.cookie)).json()).notifications.filter(
+      (n: any) => !n.read,
+    ).length,
+    2,
+  );
+  // A new event after a displayed snapshot must survive marking that snapshot.
+  await request(
+    "comment",
+    { target: post.id, text: "Another interaction" },
+    actor.cookie,
+  );
+  await request(
+    "notifications-read",
+    { ids: items.map((n: any) => n.id) },
+    creator.cookie,
+  );
+  items = (await (await state(creator.cookie)).json()).notifications;
+  assert.equal(items.filter((n: any) => !n.read).length, 1);
+  assert.ok(
+    items.every(
+      (n: any, i: number) => i === 0 || items[i - 1].createdAt >= n.createdAt,
+    ),
+  );
+  assert.notEqual(
+    (await request("notifications-read", { ids: [] })).status,
+    200,
+  );
+  assert.notEqual(
+    (await request("notifications-read", { ids: "all" }, creator.cookie))
+      .status,
+    200,
+  );
+  await request("like", { target: post.id }, creator.cookie);
+  assert.equal(
+    (await (await state(creator.cookie)).json()).notifications.length,
+    4,
+    "self-interactions do not notify the owner",
+  );
+});
