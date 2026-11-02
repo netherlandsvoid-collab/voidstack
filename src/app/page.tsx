@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useDeferredValue } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
+const Messaging = dynamic(() => import("@/components/Messaging"));
 const ActivityCenter = dynamic(() => import("@/components/ActivityCenter"));
 const ProductFilePicker = dynamic(
   () => import("@/components/ProductFilePicker"),
@@ -177,9 +178,7 @@ export default function App() {
     [media, setMedia] = useState<string[]>([]),
     [fileId, setFileId] = useState(""),
     [banner, setBanner] = useState(""),
-    [preview, setPreview] = useState(""),
-    [messageText, setMessageText] = useState(""),
-    [messageImage, setMessageImage] = useState("");
+    [preview, setPreview] = useState("");
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("profile");
   const searchQuery = useDeferredValue(query);
   const dialogPresence = usePresence(modal);
@@ -436,7 +435,6 @@ export default function App() {
         if (type === "file") setFileId(result.id);
         else if (type === "preview") setPreview(result.url);
         else if (type === "banner") setBanner(result.url);
-        else if (type === "message") setMessageImage(result.url);
         else setMedia((m) => [...m, result.url].slice(0, 6));
       }
     } catch (e) {
@@ -566,16 +564,6 @@ export default function App() {
     ? data.posts.find((p: Item) => p.id === selected.id)
     : null;
   const currentProfile = user(profileId);
-  const friends = users.filter(
-    (u) =>
-      u.id !== me?.id &&
-      (data.messages.some(
-        (m: Item) =>
-          (m.to === u.id && m.from === me?.id) ||
-          (m.from === u.id && m.to === me?.id),
-      ) ||
-        u.id === chat),
-  );
   function empty(
     title: string,
     description: string,
@@ -1449,197 +1437,32 @@ export default function App() {
                     () => open("auth"),
                   )
                 ) : (
-                  <div className={`messenger ${chat ? "chat-active" : ""}`}>
-                    <div className="conversation-list">
-                      <div className="conversation-heading">
-                        <strong>Your messages</strong>
-                        <IconButton
-                          label="New conversation"
-                          onClick={() => open("new-chat")}
-                        >
-                          <Plus size={18} />
-                        </IconButton>
-                      </div>
-                      {friends.length ? (
-                        friends.map((u) => {
-                          const msgs = data.messages.filter(
-                              (m: Item) =>
-                                (m.from === u.id && m.to === me.id) ||
-                                (m.to === u.id && m.from === me.id),
-                            ),
-                            last = msgs[msgs.length - 1];
-                          return (
-                            <button
-                              className={`conversation ${chat === u.id ? "active" : ""}`}
-                              key={u.id}
-                              onClick={() => {
-                                setChat(u.id);
-                                action("read", { from: u.id });
-                              }}
-                            >
-                              <Avatar user={u} size={39} />
-                              <span>
-                                <strong>{u.name}</strong>
-                                <small>
-                                  {last?.text || "Start a conversation"}
-                                </small>
-                              </span>
-                              {msgs.some(
-                                (m: Item) => m.to === me.id && !m.read,
-                              ) && <i />}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <p className="mini-empty">
-                          Your next collaboration starts with a hello.
-                          <button
-                            className="text-button violet"
-                            onClick={() => open("new-chat")}
-                          >
-                            Find a creator <ArrowUpRight size={14} />
-                          </button>
-                        </p>
-                      )}
-                    </div>
-                    <div className="chat-pane">
-                      {chat ? (
-                        <>
-                          <div className="chat-heading">
-                            <IconButton
-                              className="mobile-back"
-                              label="Back to conversations"
-                              onClick={() => setChat("")}
-                            >
-                              <ArrowLeft size={18} />
-                            </IconButton>
-                            <Avatar user={user(chat)} />
-                            <div>
-                              <strong>{user(chat)?.name}</strong>
-                              <small>{user(chat)?.discipline}</small>
-                            </div>
-                            <IconButton
-                              label="View profile"
-                              onClick={() => profile(chat)}
-                            >
-                              <ArrowUpRight size={19} />
-                            </IconButton>
-                          </div>
-                          <div className="chat-messages">
-                            {data.messages
-                              .filter(
-                                (m: Item) =>
-                                  (m.from === chat && m.to === me.id) ||
-                                  (m.to === chat && m.from === me.id),
-                              )
-                              .map((m: Item) => (
-                                <div
-                                  key={m.id}
-                                  className={`message-bubble ${m.from === me.id ? "outgoing" : ""}`}
-                                >
-                                  {m.image && (
-                                    <img
-                                      src={m.image}
-                                      alt="Message attachment"
-                                    />
-                                  )}
-                                  {m.text && <p>{m.text}</p>}
-                                  <small>
-                                    {new Date(m.createdAt).toLocaleTimeString(
-                                      [],
-                                      { hour: "2-digit", minute: "2-digit" },
-                                    )}
-                                    {m.from === me.id &&
-                                      (m.read ? (
-                                        <CheckCheck size={13} />
-                                      ) : (
-                                        <Check size={13} />
-                                      ))}
-                                  </small>
-                                </div>
-                              ))}
-                          </div>
-                          {messageImage && (
-                            <div className="attachment-preview">
-                              <img
-                                src={messageImage}
-                                alt="Attachment preview"
-                              />
-                              <IconButton
-                                label="Remove attachment"
-                                onClick={() => setMessageImage("")}
-                              >
-                                <X size={15} />
-                              </IconButton>
-                            </div>
-                          )}
-                          <form
-                            className="message-composer"
-                            onSubmit={async (e) => {
-                              e.preventDefault();
-                              if (!messageText.trim() && !messageImage) return;
-                              setBusy(true);
-                              try {
-                                await api("message", {
-                                  to: chat,
-                                  text: messageText,
-                                  image: messageImage,
-                                });
-                                setMessageText("");
-                                setMessageImage("");
-                                await refresh();
-                              } catch (e) {
-                                tell(
-                                  `${(e as Error).message} Your draft is kept; press send to retry.`,
-                                );
-                              } finally {
-                                setBusy(false);
-                              }
-                            }}
-                          >
-                            <label className="icon-button" title="Attach image">
-                              <Paperclip size={19} />
-                              <input
-                                type="file"
-                                hidden
-                                accept="image/jpeg,image/png,image/webp"
-                                onChange={(e) =>
-                                  handleUpload(e.target.files, "message")
-                                }
-                              />
-                            </label>
-                            <input
-                              placeholder="A thoughtful hello goes a long way..."
-                              aria-label="Message"
-                              value={messageText}
-                              onChange={(e) => setMessageText(e.target.value)}
-                              maxLength={2000}
-                            />
-                            <button
-                              disabled={
-                                busy || (!messageText.trim() && !messageImage)
-                              }
-                              className="send-button"
-                              aria-label="Send message"
-                            >
-                              {busy ? (
-                                <Loader2 className="spin" size={17} />
-                              ) : (
-                                <Send size={17} />
-                              )}
-                            </button>
-                          </form>
-                        </>
-                      ) : (
-                        empty(
-                          "A space to connect.",
-                          "Choose a conversation or find someone whose work inspires you.",
-                          "Find a creator",
-                          () => open("new-chat"),
-                        )
-                      )}
-                    </div>
-                  </div>
+                  <Messaging
+                    me={me.id}
+                    users={users.map((u) => ({
+                      id: String(u.id),
+                      name: u.name || "Creator",
+                      username: u.username,
+                      avatar: u.avatar,
+                      discipline: u.discipline,
+                    }))}
+                    messages={data.messages}
+                    chat={chat}
+                    onChat={setChat}
+                    onProfile={profile}
+                    onNew={() => open("new-chat")}
+                    api={api}
+                    onSent={(sent) =>
+                      setData((d) => ({
+                        ...d,
+                        messages: [
+                          ...d.messages.filter((m: Item) => m.id !== sent.id),
+                          sent,
+                        ],
+                      }))
+                    }
+                    onRefresh={refresh}
+                  />
                 )}
               </>
             )}
