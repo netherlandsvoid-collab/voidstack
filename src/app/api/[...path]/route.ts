@@ -157,7 +157,9 @@ async function handleGET(
           : [],
         comments: records.comment,
         notifications: u
-          ? records.notification.filter((x: any) => x.userId === u.id)
+          ? records.notification
+              .filter((x: any) => x.userId === u.id)
+              .sort((a: any, b: any) => b.createdAt - a.createdAt)
           : [],
         sellerPaymentMethods: u
           ? (await get("seller-payment", u.id))?.methods || []
@@ -517,15 +519,25 @@ async function handlePOST(
         }),
       );
     }
+    if (a === "notifications-read") {
+      if (
+        !Array.isArray(b.ids) ||
+        b.ids.length > 1000 ||
+        b.ids.some((id: unknown) => typeof id !== "string")
+      )
+        throw new Error("Choose up to 1000 notifications to mark as read.");
+      const ids = new Set(b.ids);
+      const entries = (await all("notification"))
+        .filter((n) => n.userId === u.id && !n.read && ids.has(n.id))
+        .map((n) => ({ kind: "notification", value: { ...n, read: true } }));
+      if (entries.length) await putMany(entries);
+      return ok({ ok: true });
+    }
     if (a === "read") {
       for (const message of (await all("message")).filter(
         (x) => x.to === u.id && x.from === b.from,
       ))
         await put("message", { ...message, read: true });
-      for (const notification of (await all("notification")).filter(
-        (x) => x.userId === u.id,
-      ))
-        await put("notification", { ...notification, read: true });
       return ok({ ok: true });
     }
     if (a === "upload-init") return ok(await beginUpload(u, b));

@@ -1379,3 +1379,72 @@ select:focus {
     min-width: 75px;
   }
 }
+
+.activity-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.activity-filters {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+.activity-filters button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.activity-filters button[aria-pressed="true"] {
+  color: var(--accent-text);
+  background: var(--violet-bg);
+}
+.notifications-list > button.activity-unread {
+  background: var(--soft);
+  border-left: 3px solid var(--accent);
+}
+.notifications-list > button .activity-avatar {
+  flex: 0 0 43px;
+  width: 43px;
+  height: 43px;
+  min-width: 43px;
+  object-fit: cover;
+}
+.activity-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.activity-empty {
+  padding: 50px 20px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 16px;
+}
+.activity-empty > svg {
+  margin: 0 auto 16px;
+  color: var(--accent-text);
+}
+.activity-empty h2 {
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.signal-shell .activity-bell-count {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  padding: 2px 5px;
+  min-width: 18px;
+  border-radius: 12px;
+  font-size: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+}

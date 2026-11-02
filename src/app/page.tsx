@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useDeferredValue } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
+const ActivityCenter = dynamic(() => import("@/components/ActivityCenter"));
 const ProductFilePicker = dynamic(
   () => import("@/components/ProductFilePicker"),
 );
@@ -378,6 +379,10 @@ export default function App() {
     setSellDownload(false);
   }
   function go(id: string) {
+    if (id === "notifications" && !me) {
+      open("auth");
+      return;
+    }
     history.replaceState(null, "", "/");
     pendingPageFocus.current = true;
     setPage(id);
@@ -386,7 +391,7 @@ export default function App() {
     setSearchOpen(false);
     setMobileNav(false);
     setLimit(6);
-    if (id === "notifications" && me) action("read");
+
     window.scrollTo({
       top: 0,
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -794,7 +799,12 @@ export default function App() {
                 <b className="nav-badge">{unread}</b>
               )}
               {n.id === "notifications" && unseen > 0 && (
-                <span className="notification-dot" />
+                <b
+                  className="nav-badge"
+                  aria-label={`${unseen} unread notifications`}
+                >
+                  {unseen > 99 ? "99+" : unseen}
+                </b>
               )}
             </button>
           ))}
@@ -965,11 +975,17 @@ export default function App() {
               )}
             </div>
             <IconButton
-              label="Notifications"
+              label={
+                unseen ? `Notifications, ${unseen} unread` : "Notifications"
+              }
               onClick={() => go("notifications")}
             >
               <Bell size={19} />
-              {unseen > 0 && <i />}
+              {unseen > 0 && (
+                <span className="activity-bell-count" aria-hidden="true">
+                  {unseen > 99 ? "99+" : unseen}
+                </span>
+              )}
             </IconButton>
             <button
               className="top-avatar"
@@ -1629,40 +1645,32 @@ export default function App() {
             )}
             {page === "notifications" && (
               <>
-                <div className="page-heading">
-                  <div className="eyebrow">YOUR CREATIVE CIRCLE</div>
-                  <h1>A little good news.</h1>
-                  <p>The latest from your corner of the community.</p>
-                </div>
-                {data.notifications.length ? (
-                  <div className="notifications-list">
-                    {[...data.notifications].reverse().map((n: Item) => (
-                      <button
-                        key={n.id}
-                        onClick={() => {
-                          const [type, id] = n.target.split(":");
-                          if (type === "profile") profile(id);
-                          else if (type === "post") open("post", { id });
-                          else go(type);
-                        }}
-                      >
-                        <Avatar user={user(n.actorId)} size={43} />
-                        <span>
-                          <strong>{user(n.actorId)?.name}</strong> {n.text}
-                          <small>
-                            {new Date(n.createdAt).toLocaleString()}
-                          </small>
-                        </span>
-                        <ChevronRight size={17} />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  empty(
-                    "Quiet, in a good way.",
-                    "New follows, comments, and purchases will appear here.",
-                  )
-                )}
+                <ActivityCenter
+                  notifications={data.notifications}
+                  users={users.map((u) => ({
+                    id: String(u.id),
+                    name: u.name || "Creator",
+                    avatar: u.avatar,
+                  }))}
+                  onRead={async (ids) => {
+                    // IDs are a snapshot: arrivals during the request stay unread.
+                    for (let i = 0; i < ids.length; i += 1000)
+                      await api("notifications-read", {
+                        ids: ids.slice(i, i + 1000),
+                      });
+                    await refresh();
+                  }}
+                  onOpen={(n) => {
+                    if (!n.read)
+                      void api("notifications-read", { ids: [n.id] })
+                        .then(() => refresh())
+                        .catch((e) => tell(e.message));
+                    const [type, id] = n.target.split(":");
+                    if (type === "profile") profile(id);
+                    else if (type === "post") open("post", { id });
+                    else if (type === "messages") message(n.actorId);
+                  }}
+                />
               </>
             )}
             {page === "seller" && (
