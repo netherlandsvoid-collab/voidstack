@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState, useRef, useDeferredValue } from "react";
+import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
+const SearchExperience = dynamic(() => import("@/components/SearchExperience"));
 const Messaging = dynamic(() => import("@/components/Messaging"));
 const ActivityCenter = dynamic(() => import("@/components/ActivityCenter"));
 const ProductFilePicker = dynamic(
@@ -159,7 +160,6 @@ export default function App() {
     [page, setPage] = useState("home"),
     [tab, setTab] = useState("Discover"),
     [category, setCategory] = useState("For you"),
-    [query, setQuery] = useState(""),
     [searchOpen, setSearchOpen] = useState(false),
     [modal, setModal] = useState(""),
     [selected, setSelected] = useState<Item | null>(null),
@@ -180,7 +180,6 @@ export default function App() {
     [banner, setBanner] = useState(""),
     [preview, setPreview] = useState("");
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("profile");
-  const searchQuery = useDeferredValue(query);
   const dialogPresence = usePresence(modal);
   const navigationPresence = usePresence(mobileNav ? "navigation" : "");
   const modalRef = useRef<HTMLDivElement>(null);
@@ -306,7 +305,8 @@ export default function App() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        document.querySelector<HTMLInputElement>(".search-wrap input")?.focus();
+        if (!document.querySelector("[role=dialog], dialog[open]"))
+          setSearchOpen(true);
       }
     };
     document.addEventListener("keydown", handler);
@@ -386,7 +386,6 @@ export default function App() {
     pendingPageFocus.current = true;
     setPage(id);
     if (id !== page) setCategory("For you");
-    setQuery("");
     setSearchOpen(false);
     setMobileNav(false);
     setLimit(6);
@@ -529,19 +528,9 @@ export default function App() {
     posts = data.posts.filter((p: Item) => data.saved.includes(p.id));
   if (page === "profile")
     posts = data.posts.filter((p: Item) => p.userId === profileId);
-  if (query)
-    posts = posts.filter((p) =>
-      `${p.title} ${p.caption} ${user(p.userId)?.name} ${p.tags.join(" ")}`
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()),
-    );
   let products = data.products.filter(
     (p: Item) =>
       (page === "seller" ? p.userId === me?.id : p.status === "published") &&
-      (!query ||
-        `${p.title} ${p.category}`
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())) &&
       (currencyFilter === "all" || (p.currency || "USD") === currencyFilter),
   );
   if (category !== "For you" && page === "marketplace")
@@ -896,72 +885,32 @@ export default function App() {
             </span>
           </div>
           <div className="topbar-actions">
-            <div className="search-wrap">
-              <Search size={17} />
-              <input
-                aria-label="Search Nexirel"
-                placeholder="Find your next inspiration"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSearchOpen(!!e.target.value);
-                }}
-                onFocus={() => query && setSearchOpen(true)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setSearchOpen(false);
-                    event.currentTarget.blur();
-                  }
-                }}
-                onBlur={(event) => {
-                  if (
-                    !event.currentTarget.parentElement?.contains(
-                      event.relatedTarget as Node,
-                    )
-                  )
-                    setSearchOpen(false);
+            <button
+              className="nx-search-trigger"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search Nexirel"
+              aria-haspopup="dialog"
+            >
+              <Search size={19} />
+              <span>Search Nexirel</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            {searchOpen && (
+              <SearchExperience
+                users={users}
+                posts={data.posts}
+                mediaTypes={data.mediaTypes || {}}
+                products={data.products}
+                loading={loading}
+                onClose={() => setSearchOpen(false)}
+                onSelect={(entry) => {
+                  if (entry.kind === "creator") profile(entry.id);
+                  else if (entry.kind === "asset")
+                    open("product", entry.source);
+                  else open("post", { id: entry.id });
                 }}
               />
-              <kbd>Ctrl K</kbd>
-              {searchOpen && (
-                <div className="search-results">
-                  <div className="eyebrow">CREATORS</div>
-                  {users
-                    .filter((u) =>
-                      `${u.name} ${u.username}`
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
-                    )
-                    .slice(0, 4)
-                    .map((u) => (
-                      <button key={u.id} onClick={() => profile(u.id)}>
-                        <Avatar user={u} size={29} />
-                        <span>
-                          {u.name}
-                          <small>@{u.username}</small>
-                        </span>
-                        <ArrowUpRight size={15} />
-                      </button>
-                    ))}
-                  <button
-                    onClick={() => {
-                      go("explore");
-                      setQuery(query);
-                    }}
-                  >
-                    Search posts <ArrowRight size={15} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      go("marketplace");
-                      setQuery(query);
-                    }}
-                  >
-                    Search marketplace <ArrowRight size={15} />
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
             <IconButton
               label={
                 unseen ? `Notifications, ${unseen} unread` : "Notifications"
@@ -1061,15 +1010,6 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {query && (
-                  <div className="active-feed-filter">
-                    <span>Search: {query}</span>
-                    <button onClick={() => setQuery("")}>
-                      Clear search
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
                 <div
                   className={`signal-discovery ${page === "saved" ? "without-rail" : ""}`}
                 >
@@ -1111,7 +1051,6 @@ export default function App() {
                         () => {
                           setTab("Discover");
                           setCategory("For you");
-                          setQuery("");
                           if (page === "saved") go("explore");
                         },
                       )
