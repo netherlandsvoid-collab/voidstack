@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
+import ImageViewer from "@/components/ImageViewer";
 const SearchExperience = dynamic(() => import("@/components/SearchExperience"));
 const Messaging = dynamic(() => import("@/components/Messaging"));
 const ActivityCenter = dynamic(() => import("@/components/ActivityCenter"));
@@ -183,15 +184,26 @@ export default function App() {
   const dialogPresence = usePresence(modal);
   const navigationPresence = usePresence(mobileNav ? "navigation" : "");
   const modalRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<HTMLDivElement>(null);
+  const [zoomImage, setZoomImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
   const navigationRef = useRef<HTMLElement>(null);
   const refreshController = useRef<AbortController | null>(null);
   const lastState = useRef("");
   const lastRefresh = useRef(0);
   const pendingPageFocus = useRef(false);
   useOverlayFocus(
-    dialogPresence.value || navigationPresence.value,
-    dialogPresence.value ? modalRef : navigationRef,
+    zoomImage
+      ? "image-viewer"
+      : dialogPresence.value || navigationPresence.value,
+    zoomImage ? zoomRef : dialogPresence.value ? modalRef : navigationRef,
     () => {
+      if (zoomImage) {
+        setZoomImage(null);
+        return;
+      }
       if (dialogPresence.value) closeDialog();
       setMobileNav(false);
     },
@@ -1693,8 +1705,17 @@ export default function App() {
           </button>
         </div>
       )}
+      {zoomImage && (
+        <ImageViewer
+          src={zoomImage.src}
+          alt={zoomImage.alt}
+          panelRef={zoomRef}
+          onClose={() => setZoomImage(null)}
+        />
+      )}
       {dialogPresence.value && (
         <div
+          inert={!!zoomImage}
           className={`modal-backdrop ${dialogPresence.exiting ? "is-exiting" : ""}`}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -2220,10 +2241,22 @@ export default function App() {
                           {data.mediaTypes?.[m]?.startsWith("video/") ? (
                             <video src={m} controls />
                           ) : (
-                            <img
-                              src={m}
-                              alt={`${currentPost.title}, image ${i + 1}`}
-                            />
+                            <button
+                              className="nx-detail-image"
+                              aria-label={`Enlarge ${currentPost.title}, image ${i + 1}`}
+                              onClick={() =>
+                                setZoomImage({
+                                  src: m,
+                                  alt: `${currentPost.title}, image ${i + 1}`,
+                                })
+                              }
+                            >
+                              <img
+                                src={m}
+                                alt={`${currentPost.title}, image ${i + 1}`}
+                              />
+                              <span>Click to enlarge ↗</span>
+                            </button>
                           )}
                         </div>
                       ))
@@ -2517,7 +2550,19 @@ export default function App() {
               <>
                 <div className="detail-art product-detail-art">
                   {selected.image ? (
-                    <img src={selected.image} alt={selected.title} />
+                    <button
+                      className="nx-detail-image"
+                      aria-label={`Enlarge ${selected.title}`}
+                      onClick={() =>
+                        setZoomImage({
+                          src: selected.image,
+                          alt: selected.title,
+                        })
+                      }
+                    >
+                      <img src={selected.image} alt={selected.title} />
+                      <span>Click to enlarge ↗</span>
+                    </button>
                   ) : (
                     <Palette size={70} />
                   )}

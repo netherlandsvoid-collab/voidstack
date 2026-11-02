@@ -2313,3 +2313,214 @@ select:focus {
     transform: none;
   }
 }
+
+/* Keep the close control out of the two-column detail layout. */
+.modal.detail-modal {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+  grid-template-areas: "art content";
+  width: min(1100px, calc(100vw - 40px));
+  height: min(800px, 88dvh);
+  max-height: 88dvh;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+}
+.modal.detail-modal > .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  float: none;
+  margin: 0;
+  z-index: 4;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.modal.detail-modal > .detail-art {
+  grid-area: art;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+  background: var(--soft);
+  padding: 0;
+}
+.modal.detail-modal > .detail-content {
+  grid-area: content;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 64px 28px 28px;
+  overscroll-behavior: contain;
+}
+.modal.detail-modal .detail-content > .creator {
+  margin-bottom: 20px;
+}
+.modal.detail-modal .detail-content h2,
+.modal.detail-modal .detail-content p {
+  overflow-wrap: anywhere;
+}
+.nx-detail-image {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: zoom-in;
+}
+.modal.detail-modal .nx-detail-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  object-fit: contain;
+}
+.nx-detail-image span {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  padding: 7px 10px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 11px;
+  pointer-events: none;
+}
+.nx-detail-image:focus-visible {
+  outline: 3px solid var(--accent-text);
+  outline-offset: -3px;
+}
+.modal.detail-modal .product-detail-art {
+  display: flex;
+  justify-content: center;
+}
+.nx-image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #0b0b0b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+.nx-viewer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #303030;
+  flex-shrink: 0;
+}
+.nx-viewer-toolbar > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  min-width: 0;
+}
+.nx-viewer-toolbar > div {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.nx-viewer-toolbar button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #444;
+  border-radius: 10px;
+  background: #202020;
+  color: white;
+  cursor: pointer;
+}
+.nx-viewer-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nx-viewer-toolbar button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+.nx-viewer-toolbar output {
+  min-width: 46px;
+  text-align: center;
+  font-size: 12px;
+}
+.nx-viewer-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.nx-viewer-canvas {
+  min-width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nx-viewer-canvas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  user-select: none;
+}
+.nx-image-viewer footer {
+  text-align: center;
+  font-size: 11px;
+  color: #bdbdbd;
+  padding: 10px 16px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .modal.detail-modal {
+    display: block;
+    width: calc(100vw - 24px);
+    height: auto;
+    max-height: 90dvh;
+    overflow: auto;
+  }
+  .modal.detail-modal > .detail-art {
+    height: auto;
+    max-height: 48dvh;
+    min-height: 180px;
+  }
+  .modal.detail-modal > .detail-content {
+    height: auto;
+    overflow: visible;
+    padding: 26px 20px;
+  }
+  .modal.detail-modal .product-detail-art {
+    min-height: 0;
+  }
+  .nx-viewer-toolbar {
+    padding: 8px;
+    gap: 8px;
+  }
+  .nx-viewer-toolbar > span {
+    font-size: 11px;
+  }
+  .nx-viewer-toolbar button {
+    width: 36px;
+    height: 40px;
+  }
+  .nx-viewer-toolbar > div {
+    gap: 3px;
+  }
+  .nx-image-viewer footer {
+    font-size: 10px;
+  }
+}
