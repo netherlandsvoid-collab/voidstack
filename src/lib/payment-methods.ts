@@ -43,3 +43,6 @@ export function orderStatus(status: string) {
     )[status] || status
   );
 }
+
+export const priceLabel = (amount: number, currency = "USD") =>
+  amount === 0 ? "Free" : money(amount, currency);

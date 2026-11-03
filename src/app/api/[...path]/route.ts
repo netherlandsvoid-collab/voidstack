@@ -3,6 +3,7 @@ import {
   savePaymentMethods,
   checkoutOptions,
   startDirectOrder,
+  claimFreeResource,
   updateDirectOrder,
   publicOrder,
   currencyCode,
@@ -217,7 +218,7 @@ async function handleGET(
             "Cache-Control": "private, no-store",
           },
         });
-      if (order.mode === "direct")
+      if (order.mode === "direct" || order.mode === "free")
         return okError(
           "Your purchased file is unavailable. Contact the seller.",
           404,
@@ -650,6 +651,7 @@ async function handlePOST(
         }),
       );
     }
+    if (a === "claim-free") return ok(await claimFreeResource(u, b));
     if (a === "checkout") return ok(await startDirectOrder(u, b));
     if (a === "download-link") {
       const order = await get("order", b.orderId);
