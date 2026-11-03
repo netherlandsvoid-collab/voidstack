@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useId, useState, useRef } from "react";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
 import ImageViewer from "@/components/ImageViewer";
@@ -87,6 +87,57 @@ const navs = [
   { id: "saved", label: "Saved", icon: Bookmark },
 ];
 const image = (id: string, w = 900) => "/art/forma.svg";
+function FeedCaption({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  const id = useId();
+  const paragraph = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const element = paragraph.current;
+    if (!element || expanded) return;
+    const measure = () =>
+      setOverflowing(element.scrollHeight > element.clientHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [description, expanded]);
+
+  if (!title && !description) return null;
+
+  return (
+    <div className="signal-feed-caption">
+      {title && <h3>{title}</h3>}
+      {description && (
+        <p
+          id={id}
+          ref={paragraph}
+          className={expanded ? undefined : "is-clamped"}
+        >
+          {description}
+        </p>
+      )}
+      {description && (overflowing || expanded) && (
+        <button
+          type="button"
+          aria-controls={id}
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Avatar({ user, size = 36 }: { user?: Item; size?: number }) {
   return user?.avatar ? (
     <img
@@ -632,6 +683,10 @@ export default function App() {
   }
   function postCard(p: Item) {
     const sale = productsById.get(p.productId);
+    const listing = sale?.status === "published" ? sale : undefined;
+    const title = listing?.title?.trim() || p.title?.trim() || "";
+    const caption = p.caption?.trim() || "";
+    const description = listing?.description?.trim() || caption;
     const author = user(p.userId),
       liked = data.likes.includes(p.id),
       saved = data.saved.includes(p.id);
@@ -698,6 +753,14 @@ export default function App() {
             </button>
           )}
         </div>
+        <FeedCaption
+          title={title === caption && !p.image ? "" : title}
+          description={
+            description === title || (!p.image && description === caption)
+              ? ""
+              : description
+          }
+        />
         <div className="post-bottom">
           <div>
             <button
