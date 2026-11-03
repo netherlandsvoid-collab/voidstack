@@ -79,17 +79,12 @@ select:focus {
   background: var(--bg);
 }
 .rail-brand {
-  font-size: 32px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: -5px;
   width: 48px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 32px;
-  padding-right: 5px;
 }
 .signal-shell .sidebar nav {
   width: 100%;
@@ -191,22 +186,19 @@ select:focus {
 }
 .signal-wordmark {
   display: flex;
-  align-items: baseline;
-  font-size: 40px;
-  line-height: 1;
-  font-weight: 850;
-  letter-spacing: -2.5px;
+  align-items: center;
   flex-shrink: 0;
 }
-.signal-wordmark > span {
-  color: var(--accent-text);
-  position: relative;
+.nexirel-brand-art {
+  display: block;
+  height: 32px;
+  width: 32px;
+  background-color: currentColor;
+  mask: url("/nexirel-mark.png") center / contain no-repeat;
 }
-.signal-wordmark svg {
-  position: absolute;
-  top: -3px;
-  right: -14px;
-  stroke-width: 3;
+.signal-wordmark .nexirel-brand-art {
+  width: 146px;
+  mask-image: url("/nexirel-lockup.png");
 }
 .signal-shell .topbar-breadcrumb {
   display: none;
@@ -874,9 +866,6 @@ select:focus {
     gap: 18px;
     padding: 16px 24px;
   }
-  .signal-wordmark {
-    font-size: 32px;
-  }
   .signal-shell .topbar-actions {
     gap: 12px;
   }
@@ -937,15 +926,12 @@ select:focus {
     height: 40px;
   }
   .signal-wordmark {
-    font-size: 31px;
     grid-column: 2;
     grid-row: 1;
     justify-self: start;
   }
-  .signal-wordmark svg {
-    width: 16px;
-    top: -3px;
-    right: -10px;
+  .signal-wordmark .nexirel-brand-art {
+    width: 122px;
   }
   .signal-shell .topbar-actions {
     display: contents;
@@ -1076,15 +1062,10 @@ select:focus {
     justify-content: flex-start;
     margin: 0 0 22px 10px;
     padding: 0;
-    letter-spacing: -1px;
   }
-  .signal-shell .sidebar .rail-brand .sr-only {
-    position: static;
-    width: auto;
-    height: auto;
-    clip-path: none;
-    overflow: visible;
-    margin: 0;
+  .signal-shell .sidebar .rail-brand .nexirel-brand-art {
+    width: 146px;
+    mask-image: url("/nexirel-lockup.png");
   }
   .signal-shell .sidebar .drawer-close {
     display: flex;

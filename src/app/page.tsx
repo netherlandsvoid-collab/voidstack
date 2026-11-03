@@ -830,7 +830,7 @@ export default function App() {
         aria-label="Main navigation"
       >
         <a href="/" className="rail-brand" aria-label="Nexirel home">
-          N<span className="sr-only">exirel</span>
+          <span className="nexirel-brand-art" aria-hidden="true" />
         </a>
         <button
           className="drawer-close icon-button"
@@ -937,10 +937,7 @@ export default function App() {
       >
         <header className="topbar">
           <a href="/" className="signal-wordmark" aria-label="Nexirel home">
-            nexirel
-            <span>
-              .<Asterisk size={21} aria-hidden="true" />
-            </span>
+            <span className="nexirel-brand-art" aria-hidden="true" />
           </a>
           <div className="topbar-breadcrumb">
             <IconButton
