@@ -16,7 +16,12 @@ const DirectCheckout = dynamic(() => import("@/components/DirectCheckout"));
 const SellerOrderReview = dynamic(
   () => import("@/components/SellerOrderReview"),
 );
-import { currencies, money, orderStatus } from "@/lib/payment-methods";
+import {
+  currencies,
+  money,
+  priceLabel,
+  orderStatus,
+} from "@/lib/payment-methods";
 import SettingsTabs, { type SettingsTab } from "@/components/SettingsTabs";
 import DiscoveryRail from "@/components/DiscoveryRail";
 import FeedSkeleton from "@/components/FeedSkeleton";
@@ -612,7 +617,7 @@ export default function App() {
               {user(p.userId)?.name} <span>· {p.format}</span>
             </p>
           </div>
-          <strong>{money(p.price, p.currency)}</strong>
+          <strong>{priceLabel(p.price, p.currency)}</strong>
         </div>
         {page === "seller" && (
           <div className="seller-actions">
@@ -684,11 +689,11 @@ export default function App() {
           {sale?.status === "published" && (
             <button
               className="signal-file-link"
-              aria-label={`View download ${sale.title}, ${money(sale.price, sale.currency)}`}
+              aria-label={`View download ${sale.title}, ${priceLabel(sale.price, sale.currency)}`}
               onClick={() => open("product", sale)}
             >
               <span>{sale.format || "Digital download"}</span>
-              <strong>{money(sale.price, sale.currency)}</strong>
+              <strong>{priceLabel(sale.price, sale.currency)}</strong>
               <ArrowUpRight size={15} />
             </button>
           )}
@@ -846,8 +851,8 @@ export default function App() {
           </button>
           <button
             className="nav-item"
-            title="Your purchases"
-            aria-label="Your purchases"
+            title="Your downloads"
+            aria-label="Your downloads"
             onClick={() => (me ? go("downloads") : open("auth"))}
           >
             <Download size={20} />
@@ -890,7 +895,7 @@ export default function App() {
                 : page === "seller"
                   ? "Creator studio"
                   : page === "downloads"
-                    ? "Your purchases"
+                    ? "Your downloads"
                     : page === "profile"
                       ? "Creative profile"
                       : page.charAt(0).toUpperCase() + page.slice(1)}
@@ -1561,10 +1566,15 @@ export default function App() {
                           <strong>{o.title}</strong>
                           <small>
                             {new Date(o.createdAt).toLocaleDateString()} ·{" "}
-                            {money(o.amount, o.currency)} ·{" "}
-                            {o.mode === "direct"
-                              ? orderStatus(o.status)
-                              : `${o.mode} · ${o.status}`}
+                            {o.mode === "free"
+                              ? "Free"
+                              : money(o.amount, o.currency)}{" "}
+                            ·{" "}
+                            {o.mode === "free"
+                              ? "Download ready"
+                              : o.mode === "direct"
+                                ? orderStatus(o.status)
+                                : `${o.mode} · ${o.status}`}
                           </small>
                         </span>
                         <button
@@ -1927,7 +1937,7 @@ export default function App() {
                         aria-pressed={sellDownload}
                         onClick={() => setSellDownload(true)}
                       >
-                        Sell a download
+                        Share or sell a download
                       </button>
                     </div>
                   )}
@@ -1989,11 +1999,11 @@ export default function App() {
                   {sellDownload && (
                     <div className="sale-fields">
                       <label>
-                        Price
+                        Price — enter 0 for free
                         <input
                           name="price"
                           type="number"
-                          min="1"
+                          min="0"
                           max="10000000"
                           step="0.01"
                           required
@@ -2292,7 +2302,7 @@ export default function App() {
                         }
                       >
                         <ShoppingBag size={17} /> View download ·{" "}
-                        {money(
+                        {priceLabel(
                           productsById.get(currentPost.productId)!.price,
                           productsById.get(currentPost.productId)!.currency,
                         )}
@@ -2601,19 +2611,56 @@ export default function App() {
                     </div>
                   </div>
                   <div className="purchase-price">
-                    <strong>{money(selected.price, selected.currency)}</strong>
-                    <span>One-time purchase</span>
+                    <strong>
+                      {priceLabel(selected.price, selected.currency)}
+                    </strong>
+                    <span>
+                      {selected.price === 0
+                        ? "No payment required"
+                        : "One-time purchase"}
+                    </span>
                   </div>
                   <button
                     className="button primary full"
-                    onClick={() =>
-                      me ? open("checkout", selected) : open("auth")
-                    }
+                    disabled={busy}
+                    onClick={async () => {
+                      if (!me) {
+                        open("auth");
+                        return;
+                      }
+                      if (selected.price !== 0) {
+                        open("checkout", selected);
+                        return;
+                      }
+                      setBusy(true);
+                      try {
+                        const order = await api("claim-free", {
+                          productId: selected.id,
+                        });
+                        const link = await api("download-link", {
+                          orderId: order.id,
+                        });
+                        window.location.assign(link.url);
+                        await refresh();
+                        tell("Free resource added to your downloads.");
+                      } catch (e) {
+                        tell((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
                   >
-                    Get this resource <ArrowRight size={17} />
+                    {busy
+                      ? "Preparing…"
+                      : selected.price === 0
+                        ? "Download free"
+                        : "Get this resource"}{" "}
+                    <ArrowRight size={17} />
                   </button>
                   <p className="fine-print">
-                    Pay the seller directly · Seller confirms receipt
+                    {selected.price === 0
+                      ? "Free download · Sign in to save it to your library"
+                      : "Pay the seller directly · Seller confirms receipt"}
                     {selected.seed ? " · Sample file only" : ""}
                   </p>
                 </div>
@@ -2683,15 +2730,15 @@ export default function App() {
                   </label>
                   <div className="form-grid">
                     <label>
-                      Price
+                      Price — enter 0 for free
                       <input
                         name="price"
                         required
                         type="number"
-                        min="1"
+                        min="0"
                         max="10000000"
                         step="0.01"
-                        defaultValue={selected?.price || 19}
+                        defaultValue={selected?.price ?? 19}
                       />
                     </label>
                     <label>
@@ -2885,9 +2932,9 @@ export default function App() {
                       <p>
                         Settings contains your profile, username, email,
                         password, purchases, and sign-out. To sell a file,
-                        choose Sell a download when creating a post. Checkout is
-                        direct to the seller. Set up payment details in
-                        Settings, then confirm received payments in Creator
+                        choose Share or sell a download when creating a post.
+                        Checkout is direct to the seller. Set up payment details
+                        in Settings, then confirm received payments in Creator
                         studio. Forgot your password? Use the reset link on the
                         sign-in screen to receive an email.
                       </p>

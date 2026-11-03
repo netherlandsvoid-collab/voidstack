@@ -26,13 +26,15 @@ export function listingPrice(value: unknown, currency: string) {
   const amount = Number(value),
     max = ["NGN", "KES"].includes(currency) ? 10000000 : 10000;
   if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    (typeof value === "string" && !value.trim()) ||
     !Number.isFinite(amount) ||
-    amount < 1 ||
+    (amount !== 0 && amount < 1) ||
     amount > max ||
     Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001
   )
     throw new Error(
-      `Enter a ${currency} price between 1 and ${max} with at most two decimal places.`,
+      `Enter 0 for free, or a ${currency} price between 1 and ${max} with at most two decimal places.`,
     );
   return amount;
 }
@@ -99,11 +101,15 @@ export async function savePaymentMethods(user: any, body: any) {
   await put("seller-payment", { id: user.id, methods, updatedAt: Date.now() });
   return { methods };
 }
-async function availableProduct(user: any, productId: string) {
+async function availableProduct(
+  user: any,
+  productId: string,
+  allowOwn = false,
+) {
   const product = await get("product", productId);
   if (!product || product.status !== "published" || product.seed)
     throw new Error("This resource is unavailable for direct purchase.");
-  if (product.userId === user.id)
+  if (!allowOwn && product.userId === user.id)
     throw new Error("You cannot purchase your own product.");
   const seller = await get("user", product.userId);
   if (!seller || seller.disabled)
@@ -147,6 +153,8 @@ async function alert(
 }
 export async function startDirectOrder(user: any, body: any) {
   const product = await availableProduct(user, body.productId);
+  if (product.price === 0)
+    throw new Error("Use Download free for this resource.");
   const existing = (await all("order")).find(
     (o) =>
       o.userId === user.id &&
@@ -275,4 +283,38 @@ export async function updateDirectOrder(user: any, body: any) {
       "downloads",
     );
   return publicOrder(next);
+}
+
+// Free access is granted from the stored listing price, never a client-supplied amount.
+export async function claimFreeResource(user: any, body: any) {
+  const product = await availableProduct(user, body.productId, true);
+  if (product.price !== 0)
+    throw new Error(
+      "This resource is not free. Open its listing to see the current price.",
+    );
+  const order = {
+    id: createHash("sha256")
+      .update(`free:${user.id}:${product.id}`)
+      .digest("hex"),
+    userId: user.id,
+    sellerId: product.userId,
+    productId: product.id,
+    fileId: product.fileId,
+    title: product.title,
+    amount: 0,
+    currency: product.currency || "USD",
+    mode: "free",
+    status: "paid",
+    createdAt: Date.now(),
+  };
+  const { error } = await database()
+    .from("voidstack_records")
+    .upsert(
+      { kind: "order", id: order.id, data: order },
+      { onConflict: "kind,id", ignoreDuplicates: true },
+    );
+  if (error)
+    throw new BackendError("Could not add this free resource. Try again.");
+  events.emit("change");
+  return publicOrder(await get("order", order.id));
 }

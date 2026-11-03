@@ -45,13 +45,19 @@ export default function SellerOrderReview({
           <strong>{order.title}</strong>
           <small>
             {buyerName} · {new Date(order.createdAt).toLocaleDateString()} ·{" "}
-            {order.mode === "direct"
-              ? "Direct payment"
-              : `${order.mode} · No real payment`}
+            {order.mode === "free"
+              ? "Free resource"
+              : order.mode === "direct"
+                ? "Direct payment"
+                : `${order.mode} · No real payment`}
           </small>
         </span>
-        <b>{money(order.amount, order.currency)}</b>
-        <span className="status">{orderStatus(order.status)}</span>
+        <b>
+          {order.mode === "free" ? "Free" : money(order.amount, order.currency)}
+        </b>
+        <span className="status">
+          {order.mode === "free" ? "Download ready" : orderStatus(order.status)}
+        </span>
       </div>
       {order.mode === "direct" && (
         <details>
@@ -96,8 +102,10 @@ export default function SellerOrderReview({
                     <label className="payment-confirm">
                       <input type="checkbox" name="received" required />I
                       checked my account and received the full{" "}
-                      {money(order.amount, order.currency)}. Confirming unlocks
-                      the buyer’s file.
+                      {order.mode === "free"
+                        ? "Free"
+                        : money(order.amount, order.currency)}
+                      . Confirming unlocks the buyer’s file.
                     </label>
                   ) : (
                     <label>

@@ -240,7 +240,7 @@ test("sale posts reject invalid prices, missing previews and someone else's priv
     media: [preview.url],
     sale: { price: 10, fileId: file.id },
   };
-  for (const price of [0, -1, 10001, "invalid", 1.999])
+  for (const price of [-1, 0.5, 10001, "invalid", 1.999])
     assert.equal(
       (
         await request(
@@ -264,6 +264,17 @@ test("sale posts reject invalid prices, missing previews and someone else's priv
       )
     ).status,
     400,
+  );
+  const freePost = await request(
+    "post",
+    { ...body, sale: { ...body.sale, price: 0 } },
+    seller.cookie,
+  );
+  assert.equal(freePost.status, 200);
+  const freeData = await freePost.json();
+  assert.equal(
+    fixture.records.get("product:" + freeData.productId).data.price,
+    0,
   );
   const before = fixture.records.size;
   fixture.setFailBulk(true);

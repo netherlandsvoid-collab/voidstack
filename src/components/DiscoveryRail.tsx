@@ -1,5 +1,5 @@
 import { ArrowRight, ArrowUpRight, Check, ShoppingBag } from "lucide-react";
-import { money } from "@/lib/payment-methods";
+import { priceLabel } from "@/lib/payment-methods";
 
 type Creator = {
   id: string;
@@ -155,7 +155,7 @@ export default function DiscoveryRail({
                 {resource.seed ? "Sample resource · " : ""}
                 {resource.format || "Digital download"}
               </small>
-              <b>{money(resource.price, resource.currency)}</b>
+              <b>{priceLabel(resource.price, resource.currency)}</b>
             </span>
             <ShoppingBag size={21} />
           </button>

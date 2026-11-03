@@ -353,3 +353,97 @@ test("only the seller can unlock a file; rejection, resubmission, stale reviews 
   assert.equal(downloaded.status, 200);
   assert.equal(await downloaded.text(), "original file");
 });
+
+test("free claims need no payment method, are idempotent and preserve private download access", async () => {
+  const { seller, buyer, stranger, product } = await setup("free");
+  await request("seller-payment", { methods: [] }, seller.cookie);
+  const listing = await request(
+    "product",
+    { ...product, price: 0 },
+    seller.cookie,
+  );
+  assert.equal(listing.status, 200);
+  const claims = await Promise.all(
+    [1, 2].map(() =>
+      request("claim-free", { productId: product.id }, buyer.cookie),
+    ),
+  );
+  assert.ok(claims.every((c) => c.status === 200));
+  const order = claims[0].data;
+  assert.equal(order.id, claims[1].data.id);
+  assert.equal(order.amount, 0);
+  assert.equal(order.mode, "free");
+  assert.equal(order.status, "paid");
+  assert.equal(order.fileId, undefined);
+  assert.equal(
+    (await request("download-link", { orderId: order.id }, stranger.cookie))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await request("checkout", { productId: product.id }, buyer.cookie)).status,
+    400,
+  );
+  assert.equal(
+    (await request("claim-free", { productId: product.id })).status,
+    400,
+  );
+  await request(
+    "product",
+    { ...product, price: 20, status: "archived" },
+    seller.cookie,
+  );
+  const link = (
+    await request("download-link", { orderId: order.id }, buyer.cookie)
+  ).data.url;
+  const response = await GET(
+    new Request("https://app.test" + link, {
+      headers: { cookie: buyer.cookie },
+    }),
+    { params: Promise.resolve({ path: ["download", order.id] }) },
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "original file");
+  assert.equal(
+    (await request("claim-free", { productId: product.id }, stranger.cookie))
+      .status,
+    400,
+  );
+});
+test("free claim cannot bypass a paid price or an invalid file", async () => {
+  const { seller, buyer, product } = await setup("notfree");
+  assert.equal(
+    (
+      await request(
+        "claim-free",
+        { productId: product.id, price: 0, amount: 0 },
+        buyer.cookie,
+      )
+    ).status,
+    400,
+  );
+  await put("product", { ...product, price: 0, fileId: "missing-file" });
+  assert.equal(
+    (await request("claim-free", { productId: product.id }, buyer.cookie))
+      .status,
+    400,
+  );
+});
+test("zero is an explicit valid price; missing, negative and malformed prices are rejected", async () => {
+  const { listingPrice } = await import("../src/lib/direct-payments");
+  assert.equal(listingPrice(0, "USD"), 0);
+  assert.equal(listingPrice("0", "NGN"), 0);
+  for (const price of [
+    "",
+    " ",
+    null,
+    undefined,
+    false,
+    -1,
+    NaN,
+    Infinity,
+    "garbage",
+    0.001,
+  ])
+    assert.throws(() => listingPrice(price, "USD"));
+});
