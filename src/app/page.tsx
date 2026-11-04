@@ -138,6 +138,12 @@ function FeedCaption({
   );
 }
 
+function previewImage(source: string) {
+  return /^\/api\/media\/[a-f0-9]{32}$/.test(source)
+    ? `${source}?preview=1`
+    : source;
+}
+
 function Avatar({ user, size = 36 }: { user?: Item; size?: number }) {
   return user?.avatar ? (
     <img
@@ -645,7 +651,12 @@ export default function App() {
       <article className="product-card" key={p.id}>
         <button className="product-art" onClick={() => open("product", p)}>
           {p.image ? (
-            <img src={p.image} alt={p.title} loading="lazy" decoding="async" />
+            <img
+              src={previewImage(p.image)}
+              alt={p.title}
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <div className="art-placeholder">
               <Palette size={48} />
@@ -730,7 +741,7 @@ export default function App() {
             >
               {p.image ? (
                 <img
-                  src={p.image}
+                  src={previewImage(p.image)}
                   alt={p.title}
                   loading="lazy"
                   decoding="async"
