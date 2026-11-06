@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 
-const software = ["All software", "After Effects", "Blender"] as const;
+const software = [
+  "All software",
+  "After Effects",
+  "Blender",
+  "Figma",
+  "Photoshop",
+] as const;
 
 const tools = [
   {
@@ -50,7 +56,7 @@ const tools = [
     compatibility:
       "Included in Blender 3.6. Enable it in Preferences → Add-ons.",
     url: "https://docs.blender.org/manual/en/3.6/addons/node/node_wrangler.html",
-    bundled: true,
+    guide: true,
   },
   {
     name: "LoopTools",
@@ -62,7 +68,123 @@ const tools = [
     compatibility:
       "Included in Blender 3.6. Enable Mesh: LoopTools in Preferences → Add-ons.",
     url: "https://docs.blender.org/manual/en/3.6/addons/mesh/looptools.html",
-    bundled: true,
+    guide: true,
+  },
+  {
+    name: "Biome Reader",
+    publisher: "Geo-Scatter",
+    software: "Blender",
+    kind: "Scattering add-on",
+    description: "Load biome presets and scatter plants across terrain.",
+    platform: "Free hobbyist edition · Publisher form requires an email",
+    compatibility:
+      "For Blender 3.6, check the included build against Geo-Scatter’s version guide before installing.",
+    url: "https://www.geoscatter.com/download.html",
+  },
+  {
+    name: "Plant Library",
+    publisher: "Geo-Scatter",
+    software: "Blender",
+    kind: "Biome assets",
+    description:
+      "Start a nature scene with the publisher’s free plant collection.",
+    compatibility:
+      "Works with Geo-Scatter or Biome Reader. Look for Plant Library on the publisher’s biome page.",
+    url: "https://www.geoscatter.com/biomes.html",
+  },
+  {
+    name: "Studio Small 06",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "Studio HDRI",
+    description:
+      "Light products or metallic materials with bright spotlights and crisp reflections.",
+    compatibility:
+      "Load as a World Environment Texture in Blender 3.6. Try 1K first.",
+    url: "https://polyhaven.com/a/studio_small_06",
+  },
+  {
+    name: "Kloofendal Overcast",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "Sky HDRI",
+    description:
+      "Give outdoor scenes soft, cool daylight with a sky-only environment.",
+    compatibility: "Load as a World Environment Texture in Blender 3.6.",
+    url: "https://polyhaven.com/a/kloofendal_overcast_puresky",
+  },
+  {
+    name: "Rosendal Park Sunset",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "Sky HDRI",
+    description: "Use a warm horizon and cool blue sky for sunset lighting.",
+    compatibility: "Load as a World Environment Texture in Blender 3.6.",
+    url: "https://polyhaven.com/a/rosendal_park_sunset_puresky",
+  },
+  {
+    name: "Poly Haven Textures",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "PBR material library",
+    description:
+      "Find terrain, wood, stone, and other surfaces with maps for material setup.",
+    compatibility:
+      "Download individual maps for Blender 3.6. No library add-on required.",
+    url: "https://polyhaven.com/textures",
+  },
+  {
+    name: "Poly Haven Models",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "3D model library",
+    description:
+      "Browse props, furniture, foliage, and more to dress your scenes.",
+    compatibility:
+      "Check available file formats and Blender compatibility on each asset page.",
+    url: "https://polyhaven.com/models",
+  },
+  {
+    name: "Iconify",
+    publisher: "Iconify",
+    software: "Figma",
+    kind: "Icon plug-in",
+    description:
+      "Search multiple icon sets and insert editable SVGs into your designs.",
+    compatibility:
+      "Install through the Figma Community link on Iconify’s guide.",
+    url: "https://iconify.design/docs/design/figma/",
+  },
+  {
+    name: "Material 3 Design Kit",
+    publisher: "Google",
+    software: "Figma",
+    kind: "UI kit",
+    description: "Design interfaces using Material 3 components and styles.",
+    compatibility: "Open the Community file in Figma Design.",
+    url: "https://www.figma.com/community/file/1035203688168086460/material-3-design-kit",
+  },
+  {
+    name: "Adobe Photoshop Brushes",
+    publisher: "Adobe",
+    software: "Photoshop",
+    kind: "Brush packs",
+    description:
+      "Find free brush packs for sketching, painting, and adding texture.",
+    compatibility:
+      "Requires Photoshop desktop. In the Brushes panel, choose Get More Brushes.",
+    url: "https://helpx.adobe.com/photoshop/desktop/apply-painting-techniques/brushes-presets/import-brushes-brush-packs.html",
+    guide: true,
+  },
+  {
+    name: "SuperPNG",
+    publisher: "fnord",
+    software: "Photoshop",
+    kind: "PNG export plug-in",
+    description: "Get more control over PNG compression and alpha channels.",
+    compatibility:
+      "Legacy plug-in. Verify compatibility with your Photoshop version and OS before installing.",
+    url: "https://github.com/fnordware/SuperPNG",
   },
 ];
 
@@ -118,9 +240,7 @@ export default function CuratedTools() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {tool.bundled
-                ? "Open official guide"
-                : "Get from official source"}
+              {tool.guide ? "Open official guide" : "Get from official source"}
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
           </article>
