@@ -424,3 +424,42 @@ test("message state is chronological and restricted to the signed-in participant
   assert.deepEqual((await (await state(outsider.cookie)).json()).messages, []);
   assert.deepEqual((await (await state()).json()).messages, []);
 });
+
+test("creator portfolios share ordered pins publicly and reject another creator’s project", async () => {
+  const creator = await account("portfolio_creator");
+  const other = await account("portfolio_other");
+  const first = "a".repeat(32);
+  const second = "b".repeat(32);
+  const foreign = "c".repeat(32);
+  for (const [id, userId] of [
+    [first, creator.id],
+    [second, creator.id],
+    [foreign, other.id],
+  ]) {
+    fixture.records.set("post:" + id, {
+      kind: "post",
+      id,
+      data: { id, userId, title: id, createdAt: Date.now() },
+    });
+  }
+  const portfolio = {
+    name: creator.name,
+    workHeadline: "Motion designer",
+    availableForWork: true,
+    pinnedPostIds: [second, first],
+  };
+  const saved = await request("profile", portfolio, creator.cookie);
+  assert.equal(saved.status, 200, await saved.clone().text());
+  const rejected = await request(
+    "profile",
+    { ...portfolio, pinnedPostIds: [foreign] },
+    creator.cookie,
+  );
+  assert.equal(rejected.status, 403);
+  const guest = await (await state()).json();
+  const publicProfile = guest.users.find((user: any) => user.id === creator.id);
+  assert.equal(publicProfile.workHeadline, "Motion designer");
+  assert.equal(publicProfile.availableForWork, true);
+  assert.deepEqual(publicProfile.pinnedPostIds, [second, first]);
+  assert.equal(publicProfile.email, undefined);
+});
