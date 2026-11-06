@@ -12,7 +12,7 @@ const manrope = localFont({
   weight: "200 800",
 });
 export const metadata: Metadata = {
-  icons: { icon: "/nexirel-monochrome-192.png", apple: "/nexirel-monochrome-192.png" },
+  icons: { icon: "/nexirel-stroke-192.png", apple: "/nexirel-stroke-192.png" },
   appleWebApp: { capable: true, title: "Nexirel" },
   title: "Nexirel — Where ideas find their people.",
   description:
