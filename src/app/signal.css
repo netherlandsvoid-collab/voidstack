@@ -194,11 +194,11 @@ select:focus {
   height: 32px;
   width: 32px;
   background-color: currentColor;
-  mask: url("/nexirel-mark.png") center / contain no-repeat;
+  mask: url("/nexirel-stroke-mark.png") center / contain no-repeat;
 }
 .signal-wordmark .nexirel-brand-art {
   width: 146px;
-  mask-image: url("/nexirel-lockup.png");
+  mask-image: url("/nexirel-stroke-lockup.png");
 }
 .signal-shell .topbar-breadcrumb {
   display: none;
@@ -1065,7 +1065,7 @@ select:focus {
   }
   .signal-shell .sidebar .rail-brand .nexirel-brand-art {
     width: 146px;
-    mask-image: url("/nexirel-lockup.png");
+    mask-image: url("/nexirel-stroke-lockup.png");
   }
   .signal-shell .sidebar .drawer-close {
     display: flex;
