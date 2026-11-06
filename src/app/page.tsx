@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useState, useRef } from "react";
+import { resourceCategories } from "@/lib/resource-categories";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
 import ImageViewer from "@/components/ImageViewer";
@@ -235,6 +236,7 @@ export default function App() {
     [dark, setDark] = useState(false),
     [mobileNav, setMobileNav] = useState(false),
     [limit, setLimit] = useState(6),
+    [freeResources, setFreeResources] = useState(false),
     [currencyFilter, setCurrencyFilter] = useState("all"),
     [sort, setSort] = useState("recent"),
     [authMode, setAuthMode] = useState("register"),
@@ -353,6 +355,10 @@ export default function App() {
       setSelected({ id: initial.get("post") });
       setModal("post");
     }
+    if (initial.get("marketplace") === "free") {
+      setPage("marketplace");
+      setFreeResources(true);
+    }
     if (initial.get("purchases")) setPage("downloads");
     if (initial.get("account") === "email-confirmed") {
       tell("Email confirmation complete. Your account details will refresh.");
@@ -418,7 +424,15 @@ export default function App() {
   }
   function closeDialog() {
     setModal("");
-    history.replaceState(null, "", page === "profile" ? profileLink(profileId) : "/");
+    history.replaceState(
+      null,
+      "",
+      page === "profile"
+        ? profileLink(profileId)
+        : page === "marketplace" && freeResources
+          ? "/?marketplace=free"
+          : "/",
+    );
   }
   function profileLink(id: string) {
     const link = new URL("/", location.origin);
@@ -472,6 +486,7 @@ export default function App() {
     }
     history.replaceState(null, "", "/");
     pendingPageFocus.current = true;
+    setFreeResources(false);
     setPage(id);
     if (id !== page) setCategory("For you");
     setSearchOpen(false);
@@ -489,6 +504,12 @@ export default function App() {
         document.getElementById("main-content")?.focus({ preventScroll: true });
         pendingPageFocus.current = false;
       });
+  }
+  function showFreeResources(enabled: boolean) {
+    setFreeResources(enabled);
+    setSort("recent");
+    setCategory("For you");
+    history.replaceState(null, "", enabled ? "/?marketplace=free" : "/");
   }
   function profile(id: string) {
     setProfileId(id);
@@ -564,7 +585,7 @@ export default function App() {
           media,
           id: selected?.id,
           ...(sellDownload
-            ? { sale: { price: b.price, currency: b.currency, fileId } }
+            ? { sale: { price: b.price, currency: b.currency, category: b.category, fileId } }
             : {}),
         });
         setModal("");
@@ -629,7 +650,9 @@ export default function App() {
   let products = data.products.filter(
     (p: Item) =>
       (page === "seller" ? p.userId === me?.id : p.status === "published") &&
-      (currencyFilter === "all" || (p.currency || "USD") === currencyFilter),
+      (page === "marketplace" && freeResources
+        ? p.price === 0
+        : currencyFilter === "all" || (p.currency || "USD") === currencyFilter),
   );
   if (category !== "For you" && page === "marketplace")
     products = products.filter((p: Item) =>
@@ -1207,12 +1230,13 @@ export default function App() {
                 <div className="page-heading">
                   <div className="eyebrow">THE CREATIVE MARKETPLACE</div>
                   <h1>
-                    Make your next great thing
+                    {freeResources ? "Free tools, plugins & assets" : "Make your next great thing"}
                     <ArrowUpRight className="heading-spark" size={38} />
                   </h1>
                   <p>
-                    Thoughtful resources from independent creators. Make them
-                    your own.
+                    {freeResources
+                      ? "Explore free downloads shared by Nexirel creators."
+                      : "Thoughtful resources from independent creators. Make them your own."}
                   </p>
                 </div>
                 <div className="market-banner">
@@ -1226,12 +1250,10 @@ export default function App() {
                     <p>A toolkit for whatever comes next.</p>
                     <button
                       className="button dark-button"
-                      onClick={() => {
-                        setCategory("Templates");
-                        tell("Showing design templates");
-                      }}
+                      aria-pressed={freeResources}
+                      onClick={() => showFreeResources(!freeResources)}
                     >
-                      Explore the collection <ArrowUpRight size={16} />
+                      {freeResources ? "Back to all resources" : "Browse free resources"} <ArrowUpRight size={16} />
                     </button>
                   </div>
                   <img
@@ -1242,14 +1264,7 @@ export default function App() {
                 </div>
                 <div className="market-filters">
                   <div className="category-row">
-                    {[
-                      "For you",
-                      "Templates",
-                      "Digital art",
-                      "3D assets",
-                      "Photography",
-                      "Illustration",
-                    ].map((c) => (
+                    {["For you", ...resourceCategories].map((c) => (
                       <button
                         key={c}
                         className={category === c ? "selected" : ""}
@@ -1259,43 +1274,49 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <div className="selects">
-                    <select
-                      aria-label="Filter by currency"
-                      value={currencyFilter}
-                      onChange={(e) => setCurrencyFilter(e.target.value)}
-                    >
-                      <option value="all">All currencies</option>
-                      {currencies.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                  {!freeResources && (
+                    <div className="selects">
+                      <select
+                        aria-label="Filter by currency"
+                        value={currencyFilter}
+                        onChange={(e) => setCurrencyFilter(e.target.value)}
+                      >
+                        <option value="all">All currencies</option>
+                        {currencies.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Sort products"
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value)}
+                      >
+                        <option value="recent">Recommended</option>
+                        <option value="low">
+                          Currency, then price: low to high
                         </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label="Sort products"
-                      value={sort}
-                      onChange={(e) => setSort(e.target.value)}
-                    >
-                      <option value="recent">Recommended</option>
-                      <option value="low">
-                        Currency, then price: low to high
-                      </option>
-                      <option value="high">
-                        Currency, then price: high to low
-                      </option>
-                    </select>
-                  </div>
+                        <option value="high">
+                          Currency, then price: high to low
+                        </option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div className="product-grid">{products.map(productCard)}</div>
                 {!products.length &&
                   empty(
                     "Nothing here just yet.",
-                    "Try another category or currency.",
+                    freeResources
+                      ? "Try another category to find free downloads."
+                      : "Try another category or currency.",
                   )}
                 <div className="development-notice">
-                  <ShieldCheck size={17} /> Pay creators directly. Downloads
-                  unlock after the seller confirms your payment.
+                  <ShieldCheck size={17} />
+                  {freeResources
+                    ? "Sign in to claim free downloads."
+                    : "Pay creators directly. Downloads unlock after the seller confirms your payment."}
                 </div>
               </>
             )}
@@ -2158,6 +2179,14 @@ export default function App() {
                           ))}
                         </select>
                       </label>
+                      <label>
+                        Category
+                        <select name="category" defaultValue="Digital art">
+                          {resourceCategories.map((category) => (
+                            <option key={category}>{category}</option>
+                          ))}
+                        </select>
+                      </label>
                       <p className="fine-print">
                         Use the same currency as one of your saved payment
                         options. No automatic currency conversion.
@@ -2929,15 +2958,7 @@ export default function App() {
                         name="category"
                         defaultValue={selected?.category || "Templates"}
                       >
-                        {[
-                          "Templates",
-                          "Digital art",
-                          "3D assets",
-                          "Photography",
-                          "Illustration",
-                          "UI kits",
-                          "Project files",
-                        ].map((c) => (
+                        {resourceCategories.map((c) => (
                           <option key={c}>{c}</option>
                         ))}
                       </select>

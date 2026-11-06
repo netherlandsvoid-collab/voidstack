@@ -1,3 +1,4 @@
+import { resourceCategories } from "@/lib/resource-categories";
 import { requestPasswordReset, resetForgottenPassword } from "@/lib/recovery";
 import {
   savePaymentMethods,
@@ -495,7 +496,9 @@ async function handlePOST(
           currency,
           fileId: file.id,
           image: previewImage,
-          category: "Digital art",
+          category:
+            resourceCategories.find((category) => category === b.sale.category) ||
+            "Digital art",
           format: file.name?.split(".").pop()?.toUpperCase() || "Download",
           software: "See included documentation",
           licence: "Personal use. No redistribution or resale.",

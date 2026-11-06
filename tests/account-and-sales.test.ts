@@ -267,11 +267,15 @@ test("sale posts reject invalid prices, missing previews and someone else's priv
   );
   const freePost = await request(
     "post",
-    { ...body, sale: { ...body.sale, price: 0 } },
+    { ...body, sale: { ...body.sale, price: 0, category: "Plugins" } },
     seller.cookie,
   );
   assert.equal(freePost.status, 200);
   const freeData = await freePost.json();
+  assert.equal(
+    fixture.records.get("product:" + freeData.productId).data.category,
+    "Plugins",
+  );
   assert.equal(
     fixture.records.get("product:" + freeData.productId).data.price,
     0,
