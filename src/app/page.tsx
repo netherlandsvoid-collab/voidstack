@@ -3,6 +3,7 @@ import { useEffect, useId, useState, useRef } from "react";
 import { resourceCategories } from "@/lib/resource-categories";
 import { readApiResponse } from "@/lib/api-response";
 import dynamic from "next/dynamic";
+import CuratedTools from "@/components/CuratedTools";
 import ImageViewer from "@/components/ImageViewer";
 const SearchExperience = dynamic(() => import("@/components/SearchExperience"));
 const Messaging = dynamic(() => import("@/components/Messaging"));
@@ -236,7 +237,7 @@ export default function App() {
     [dark, setDark] = useState(false),
     [mobileNav, setMobileNav] = useState(false),
     [limit, setLimit] = useState(6),
-    [freeResources, setFreeResources] = useState(false),
+    [marketView, setMarketView] = useState<"all" | "free" | "curated">("all"),
     [currencyFilter, setCurrencyFilter] = useState("all"),
     [sort, setSort] = useState("recent"),
     [authMode, setAuthMode] = useState("register"),
@@ -355,9 +356,10 @@ export default function App() {
       setSelected({ id: initial.get("post") });
       setModal("post");
     }
-    if (initial.get("marketplace") === "free") {
+    const market = initial.get("marketplace");
+    if (market === "free" || market === "curated") {
       setPage("marketplace");
-      setFreeResources(true);
+      setMarketView(market);
     }
     if (initial.get("purchases")) setPage("downloads");
     if (initial.get("account") === "email-confirmed") {
@@ -429,8 +431,8 @@ export default function App() {
       "",
       page === "profile"
         ? profileLink(profileId)
-        : page === "marketplace" && freeResources
-          ? "/?marketplace=free"
+        : page === "marketplace" && marketView !== "all"
+          ? `/?marketplace=${marketView}`
           : "/",
     );
   }
@@ -486,7 +488,7 @@ export default function App() {
     }
     history.replaceState(null, "", "/");
     pendingPageFocus.current = true;
-    setFreeResources(false);
+    setMarketView("all");
     setPage(id);
     if (id !== page) setCategory("For you");
     setSearchOpen(false);
@@ -505,11 +507,11 @@ export default function App() {
         pendingPageFocus.current = false;
       });
   }
-  function showFreeResources(enabled: boolean) {
-    setFreeResources(enabled);
+  function showMarketView(view: typeof marketView) {
+    setMarketView(view);
     setSort("recent");
     setCategory("For you");
-    history.replaceState(null, "", enabled ? "/?marketplace=free" : "/");
+    history.replaceState(null, "", view === "all" ? "/" : `/?marketplace=${view}`);
   }
   function profile(id: string) {
     setProfileId(id);
@@ -647,6 +649,7 @@ export default function App() {
     posts = data.posts.filter((p: Item) => data.saved.includes(p.id));
   if (page === "profile")
     posts = data.posts.filter((p: Item) => p.userId === profileId);
+  const freeResources = marketView !== "all";
   let products = data.products.filter(
     (p: Item) =>
       (page === "seller" ? p.userId === me?.id : p.status === "published") &&
@@ -1234,9 +1237,11 @@ export default function App() {
                     <ArrowUpRight className="heading-spark" size={38} />
                   </h1>
                   <p>
-                    {freeResources
-                      ? "Explore free downloads shared by Nexirel creators."
-                      : "Thoughtful resources from independent creators. Make them your own."}
+                    {marketView === "curated"
+                      ? "Free tools and plug-ins from their publishers, with compatibility notes."
+                      : freeResources
+                        ? "Explore free downloads shared by Nexirel creators."
+                        : "Thoughtful resources from independent creators. Make them your own."}
                   </p>
                 </div>
                 <div className="market-banner">
@@ -1250,8 +1255,7 @@ export default function App() {
                     <p>A toolkit for whatever comes next.</p>
                     <button
                       className="button dark-button"
-                      aria-pressed={freeResources}
-                      onClick={() => showFreeResources(!freeResources)}
+                      onClick={() => showMarketView(freeResources ? "all" : "free")}
                     >
                       {freeResources ? "Back to all resources" : "Browse free resources"} <ArrowUpRight size={16} />
                     </button>
@@ -1262,62 +1266,88 @@ export default function App() {
                     alt="Iridescent liquid chrome sculpture"
                   />
                 </div>
-                <div className="market-filters">
-                  <div className="category-row">
-                    {["For you", ...resourceCategories].map((c) => (
-                      <button
-                        key={c}
-                        className={category === c ? "selected" : ""}
-                        onClick={() => setCategory(c)}
-                      >
-                        {c === "For you" ? "All resources" : c}
-                      </button>
-                    ))}
+                {freeResources && (
+                  <div className="category-row curated-view-switch" role="group" aria-label="Free resource source">
+                    <button
+                      type="button"
+                      className={marketView === "free" ? "selected" : ""}
+                      aria-pressed={marketView === "free"}
+                      onClick={() => showMarketView("free")}
+                    >
+                      Creator downloads
+                    </button>
+                    <button
+                      type="button"
+                      className={marketView === "curated" ? "selected" : ""}
+                      aria-pressed={marketView === "curated"}
+                      onClick={() => showMarketView("curated")}
+                    >
+                      Curated tools
+                    </button>
                   </div>
-                  {!freeResources && (
-                    <div className="selects">
-                      <select
-                        aria-label="Filter by currency"
-                        value={currencyFilter}
-                        onChange={(e) => setCurrencyFilter(e.target.value)}
-                      >
-                        <option value="all">All currencies</option>
-                        {currencies.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
+                )}
+                {marketView === "curated" ? (
+                  <CuratedTools />
+                ) : (
+                  <>
+                    <div className="market-filters">
+                      <div className="category-row">
+                        {["For you", ...resourceCategories].map((c) => (
+                          <button
+                            key={c}
+                            className={category === c ? "selected" : ""}
+                            onClick={() => setCategory(c)}
+                          >
+                            {c === "For you" ? "All resources" : c}
+                          </button>
                         ))}
-                      </select>
-                      <select
-                        aria-label="Sort products"
-                        value={sort}
-                        onChange={(e) => setSort(e.target.value)}
-                      >
-                        <option value="recent">Recommended</option>
-                        <option value="low">
-                          Currency, then price: low to high
-                        </option>
-                        <option value="high">
-                          Currency, then price: high to low
-                        </option>
-                      </select>
+                      </div>
+                      {!freeResources && (
+                        <div className="selects">
+                          <select
+                            aria-label="Filter by currency"
+                            value={currencyFilter}
+                            onChange={(e) => setCurrencyFilter(e.target.value)}
+                          >
+                            <option value="all">All currencies</option>
+                            {currencies.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="Sort products"
+                            value={sort}
+                            onChange={(e) => setSort(e.target.value)}
+                          >
+                            <option value="recent">Recommended</option>
+                            <option value="low">
+                              Currency, then price: low to high
+                            </option>
+                            <option value="high">
+                              Currency, then price: high to low
+                            </option>
+                          </select>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="product-grid">{products.map(productCard)}</div>
-                {!products.length &&
-                  empty(
-                    "Nothing here just yet.",
-                    freeResources
-                      ? "Try another category to find free downloads."
-                      : "Try another category or currency.",
-                  )}
-                <div className="development-notice">
-                  <ShieldCheck size={17} />
-                  {freeResources
-                    ? "Sign in to claim free downloads."
-                    : "Pay creators directly. Downloads unlock after the seller confirms your payment."}
-                </div>
+                    <div className="product-grid">{products.map(productCard)}</div>
+                    {!products.length &&
+                      empty(
+                        "Nothing here just yet.",
+                        freeResources
+                          ? "Try another category to find free downloads."
+                          : "Try another category or currency.",
+                      )}
+                    <div className="development-notice">
+                      <ShieldCheck size={17} />
+                      {freeResources
+                        ? "Sign in to claim free downloads."
+                        : "Pay creators directly. Downloads unlock after the seller confirms your payment."}
+                    </div>
+                  </>
+                )}
               </>
             )}
             {page === "profile" && currentProfile && (
