@@ -479,7 +479,7 @@ export default function App() {
     setPreview(name === "settings" ? me?.avatar || "" : item?.image || "");
     setBanner(name === "settings" ? me?.banner || "" : "");
     setFileId("");
-    setSellDownload(false);
+    setSellDownload(name === "create" && item?.freeResource === true);
   }
   function go(id: string) {
     if (id === "notifications" && !me) {
@@ -580,7 +580,8 @@ export default function App() {
         );
         setModal("");
         await refresh();
-        if (authMode === "register") setTimeout(() => open("settings"), 100);
+        if (selected?.freeResource) open("create", { freeResource: true });
+        else if (authMode === "register") setTimeout(() => open("settings"), 100);
       } else if (modal === "create") {
         await api("post", {
           ...b,
@@ -592,10 +593,13 @@ export default function App() {
         });
         setModal("");
         await refresh();
+        if (selected?.freeResource) showMarketView("free");
         tell(
-          sellDownload
-            ? "Your post and download listing are published."
-            : "Your work is out in the world.",
+          selected?.freeResource
+            ? "Your free resource is published."
+            : sellDownload
+              ? "Your post and download listing are published."
+              : "Your work is out in the world.",
         );
       } else if (modal === "listing") {
         await api("product", {
@@ -1267,22 +1271,37 @@ export default function App() {
                   />
                 </div>
                 {freeResources && (
-                  <div className="category-row curated-view-switch" role="group" aria-label="Free resource source">
+                  <div className="market-filters curated-view-switch">
+                    <div
+                      className="category-row"
+                      role="group"
+                      aria-label="Free resource source"
+                    >
+                      <button
+                        type="button"
+                        className={marketView === "free" ? "selected" : ""}
+                        aria-pressed={marketView === "free"}
+                        onClick={() => showMarketView("free")}
+                      >
+                        Creator downloads
+                      </button>
+                      <button
+                        type="button"
+                        className={marketView === "curated" ? "selected" : ""}
+                        aria-pressed={marketView === "curated"}
+                        onClick={() => showMarketView("curated")}
+                      >
+                        Curated tools
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      className={marketView === "free" ? "selected" : ""}
-                      aria-pressed={marketView === "free"}
-                      onClick={() => showMarketView("free")}
+                      className="button primary"
+                      onClick={() =>
+                        open(me ? "create" : "auth", { freeResource: true })
+                      }
                     >
-                      Creator downloads
-                    </button>
-                    <button
-                      type="button"
-                      className={marketView === "curated" ? "selected" : ""}
-                      aria-pressed={marketView === "curated"}
-                      onClick={() => showMarketView("curated")}
-                    >
-                      Curated tools
+                      <Plus size={16} aria-hidden="true" /> Share a free resource
                     </button>
                   </div>
                 )}
@@ -2103,12 +2122,14 @@ export default function App() {
               <>
                 <div className="eyebrow">LET YOUR WORK DO THE TALKING</div>
                 <h2>
-                  {selected
-                    ? "Refine your post."
-                    : "Share a little of your world."}
+                  {selected?.freeResource
+                    ? "Share a free resource"
+                    : selected
+                      ? "Refine your post."
+                      : "Share a little of your world."}
                 </h2>
                 <form onSubmit={submit}>
-                  {!selected?.productId && (
+                  {!selected?.productId && !selected?.freeResource && (
                     <div
                       className="composer-modes"
                       role="group"
@@ -2189,38 +2210,49 @@ export default function App() {
                   )}
                   {sellDownload && (
                     <div className="sale-fields">
-                      <label>
-                        Price — enter 0 for free
-                        <input
-                          name="price"
-                          type="number"
-                          min="0"
-                          max="10000000"
-                          step="0.01"
-                          required
-                          placeholder="19.00"
-                        />
-                      </label>
-                      <label>
-                        Currency
-                        <select name="currency" defaultValue="USD">
-                          {currencies.map((c) => (
-                            <option key={c}>{c}</option>
-                          ))}
-                        </select>
-                      </label>
+                      {selected?.freeResource ? (
+                        <input type="hidden" name="price" value="0" />
+                      ) : (
+                        <>
+                          <label>
+                            Price — enter 0 for free
+                            <input
+                              name="price"
+                              type="number"
+                              min="0"
+                              max="10000000"
+                              step="0.01"
+                              required
+                              placeholder="19.00"
+                            />
+                          </label>
+                          <label>
+                            Currency
+                            <select name="currency" defaultValue="USD">
+                              {currencies.map((c) => (
+                                <option key={c}>{c}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </>
+                      )}
                       <label>
                         Category
-                        <select name="category" defaultValue="Digital art">
+                        <select
+                          name="category"
+                          defaultValue={selected?.freeResource ? "Plugins" : "Digital art"}
+                        >
                           {resourceCategories.map((category) => (
                             <option key={category}>{category}</option>
                           ))}
                         </select>
                       </label>
-                      <p className="fine-print">
-                        Use the same currency as one of your saved payment
-                        options. No automatic currency conversion.
-                      </p>
+                      {!selected?.freeResource && (
+                        <p className="fine-print">
+                          Use the same currency as one of your saved payment
+                          options. No automatic currency conversion.
+                        </p>
+                      )}
                       <ProductFilePicker
                         api={api}
                         onUploaded={(file) => setFileId(file?.id || "")}
@@ -2228,15 +2260,25 @@ export default function App() {
                         maxBytes={data.uploadLimits?.product}
                         disabled={busy}
                       />
-                      <p className="fine-print">
-                        Post images are public previews. The separate download
-                        is delivered after purchase. Personal use; no
-                        redistribution or resale.
-                      </p>
-                      <p className="fine-print">
-                        Checkout is currently in test mode. No real money is
-                        collected.
-                      </p>
+                      {selected?.freeResource ? (
+                        <p className="fine-print">
+                          Add a preview image and upload the file you want to share.
+                          Signed-in visitors can claim it for free. Share only files
+                          you own or have permission to distribute.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="fine-print">
+                            Post images are public previews. The separate download
+                            is delivered after purchase. Personal use; no
+                            redistribution or resale.
+                          </p>
+                          <p className="fine-print">
+                            Checkout is currently in test mode. No real money is
+                            collected.
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
                   {error && (
@@ -2250,11 +2292,13 @@ export default function App() {
                   >
                     {busy
                       ? "Working..."
-                      : selected
-                        ? "Save changes"
-                        : sellDownload
-                          ? "Publish post & listing"
-                          : "Publish your work"}
+                      : selected?.freeResource
+                        ? "Publish free resource"
+                        : selected
+                          ? "Save changes"
+                          : sellDownload
+                            ? "Publish post & listing"
+                            : "Publish your work"}
                     <ArrowUpRight size={17} />
                   </button>
                 </form>
