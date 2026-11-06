@@ -2601,7 +2601,15 @@ select:focus {
 }
 
 .curated-view-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 18px;
+}
+.curated-view-switch .category-row {
+  margin-bottom: 0;
 }
 .curated-tool {
   display: flex;
