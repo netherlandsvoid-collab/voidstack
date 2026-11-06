@@ -186,6 +186,137 @@ const tools = [
       "Legacy plug-in. Verify compatibility with your Photoshop version and OS before installing.",
     url: "https://github.com/fnordware/SuperPNG",
   },
+  {
+    name: "Motion Bro",
+    publisher: "Motion Bro",
+    software: "After Effects",
+    kind: "Preset manager",
+    description: "Preview and apply motion presets from inside After Effects.",
+    compatibility:
+      "The plug-in is free. Individual preset packs can be free or paid.",
+    url: "https://motionbro.com/plugin/",
+    badge: "Free plug-in",
+  },
+  {
+    name: "AEJuice Starter Pack",
+    publisher: "AEJuice",
+    software: "After Effects",
+    kind: "Motion assets",
+    description:
+      "Browse the free starter collection for transitions, visual effects, and motion assets.",
+    compatibility:
+      "Pack Manager has Windows and macOS installers. Check the requirements for individual packs.",
+    url: "https://aejuice.com/free-plugins/",
+    badge: "Free collection",
+  },
+  {
+    name: "DuIO",
+    publisher: "RxLaboratorio",
+    software: "After Effects",
+    kind: "Import and export script",
+    description:
+      "Bring in Krita animations or Storyboarder boards, or export keyframe animation as JSON.",
+    compatibility:
+      "Publisher lists Windows and macOS. Check the release before installing on AE 2022.",
+    url: "https://rxlaboratorio.org/rx-tool/duio/",
+  },
+  {
+    name: "Font Awesome for Figma",
+    publisher: "Font Awesome",
+    software: "Figma",
+    kind: "Icon plug-in",
+    description: "Search and insert Font Awesome icons as SVGs.",
+    compatibility:
+      "A free Font Awesome account gives you access to the free icon set.",
+    url: "https://docs.fontawesome.com/desktop/add-icons/figma-plugin/",
+    badge: "Free tier",
+    guide: true,
+  },
+  {
+    name: "Simple Design System",
+    publisher: "Figma",
+    software: "Figma",
+    kind: "UI kit",
+    description:
+      "Explore a starter design system with reusable components, styles, and variables.",
+    compatibility: "Open the Community file in Figma Design.",
+    url: "https://www.figma.com/community/file/1380235722331273046/simple-design-system",
+  },
+  {
+    name: "Intel Texture Works",
+    publisher: "Intel",
+    software: "Photoshop",
+    kind: "DDS plug-in",
+    description: "Import and export compressed game textures in Photoshop.",
+    compatibility:
+      "Legacy Windows plug-in. Intel lists Photoshop CS6 and CC 2015. Check your version before installing.",
+    url: "https://www.intel.com/content/www/us/en/developer/articles/tool/intel-texture-works-plugin.html",
+  },
+  {
+    name: "All Access Brush Pass Sampler",
+    publisher: "Tim Hankins Design",
+    software: "Photoshop",
+    kind: "Brush sampler",
+    description:
+      "Try the free brush sampler from the All Access Brush Pass plug-in.",
+    compatibility:
+      "Adobe Exchange lists Photoshop 2022 or later. The full brush library requires a paid license.",
+    url: "https://exchange.adobe.com/apps/cc/948b549a?pluginId=948b549a&workflow=share",
+    badge: "Free sampler",
+  },
+  {
+    name: "Adobe Color Wheel",
+    publisher: "Adobe",
+    software: "Photoshop",
+    kind: "Browser tool",
+    description:
+      "Build a palette with color harmony rules, then use the colors in your Photoshop project.",
+    compatibility: "Runs in your browser. No Photoshop plug-in to install.",
+    url: "https://color.adobe.com/create/color-wheel",
+  },
+  {
+    name: "Images as Planes",
+    publisher: "Blender Manual",
+    software: "Blender",
+    kind: "Bundled add-on",
+    description:
+      "Bring in an image as a textured plane, handy for logo references and scene backdrops.",
+    compatibility:
+      "Included in Blender 3.6. Enable it in Preferences → Add-ons.",
+    url: "https://docs.blender.org/manual/id/3.6/addons/import_export/images_as_planes.html",
+    guide: true,
+  },
+  {
+    name: "Moonless Golf",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "Night HDRI",
+    description:
+      "Add a starry night sky and a faint warm glow from distant lights.",
+    compatibility: "Load as a World Environment Texture in Blender 3.6.",
+    url: "https://polyhaven.com/a/moonless_golf",
+  },
+  {
+    name: "Forest Slope",
+    publisher: "Poly Haven",
+    software: "Blender",
+    kind: "Forest HDRI",
+    description:
+      "Light an outdoor scene with soft morning light filtered through pine trees.",
+    compatibility: "Load as a World Environment Texture in Blender 3.6.",
+    url: "https://polyhaven.com/a/forest_slope",
+  },
+  {
+    name: "ambientCG",
+    publisher: "ambientCG",
+    software: "Blender",
+    kind: "3D asset library",
+    description:
+      "Browse PBR materials, HDRIs, and models for terrain, buildings, and props.",
+    compatibility:
+      "Download individual texture maps for Blender 3.6. Check model formats on each asset page.",
+    url: "https://ambientcg.com/",
+  },
 ];
 
 export default function CuratedTools() {
@@ -221,7 +352,7 @@ export default function CuratedTools() {
           <article className="product-card curated-tool" key={tool.name}>
             <div className="curated-tool-meta">
               <span className="eyebrow">{tool.software}</span>
-              <span className="tag">Free</span>
+              <span className="tag">{tool.badge || "Free"}</span>
             </div>
             <div>
               <h2>{tool.name}</h2>
