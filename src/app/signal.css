@@ -2538,3 +2538,64 @@ select:focus {
   font-size: 13px;
   font-weight: 600;
 }
+
+.portfolio-availability {
+  display: inline-flex;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.portfolio-headline {
+  max-width: 520px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+.portfolio-share {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+.portfolio-projects {
+  margin: 0 20px 26px;
+}
+.portfolio-projects h2 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+.portfolio-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(175px, 100%), 1fr));
+  gap: 12px;
+}
+.portfolio-project {
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+  text-align: left;
+}
+.portfolio-project img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.portfolio-project span {
+  padding: 12px;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+.portfolio-pin-fields {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}

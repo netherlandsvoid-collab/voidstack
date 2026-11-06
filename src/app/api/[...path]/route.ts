@@ -372,6 +372,23 @@ async function handlePOST(
           banner = b.banner;
         }
       }
+      let pinnedPostIds = u.pinnedPostIds;
+      if (b.pinnedPostIds !== undefined) {
+        if (
+          !Array.isArray(b.pinnedPostIds) ||
+          b.pinnedPostIds.length > 3 ||
+          !b.pinnedPostIds.every(
+            (id: unknown) => typeof id === "string" && /^[a-f0-9]{32}$/.test(id),
+          )
+        )
+          return okError("Choose up to three of your own projects.", 400);
+        pinnedPostIds = [...new Set<string>(b.pinnedPostIds)];
+        const projects = await Promise.all(
+          pinnedPostIds.map((id: string) => get("post", id)),
+        );
+        if (projects.some((project) => project?.userId !== u.id))
+          return okError("Choose projects you’ve posted yourself.", 403);
+      }
       return ok(
         await publicUser(
           await put("user", {
@@ -383,6 +400,15 @@ async function handlePOST(
             website: /^https?:\/\//.test(b.website)
               ? String(b.website).slice(0, 250)
               : "",
+            workHeadline:
+              b.workHeadline === undefined
+                ? u.workHeadline || ""
+                : String(b.workHeadline).trim().slice(0, 120),
+            availableForWork:
+              b.availableForWork === undefined
+                ? u.availableForWork === true
+                : b.availableForWork === true,
+            pinnedPostIds: pinnedPostIds || [],
             banner,
             avatar:
               typeof b.avatar === "string" && b.avatar.startsWith("/api/media/")

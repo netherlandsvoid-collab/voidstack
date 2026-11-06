@@ -418,7 +418,21 @@ export default function App() {
   }
   function closeDialog() {
     setModal("");
-    history.replaceState(null, "", "/");
+    history.replaceState(null, "", page === "profile" ? profileLink(profileId) : "/");
+  }
+  function profileLink(id: string) {
+    const link = new URL("/", location.origin);
+    link.searchParams.set("profile", id);
+    return link.href;
+  }
+  async function copyProfileLink(id: string) {
+    const link = profileLink(id);
+    try {
+      await navigator.clipboard.writeText(link);
+      tell("Portfolio link copied.");
+    } catch {
+      tell("Copy this portfolio link: " + link);
+    }
   }
   async function copyPostLink(id: string) {
     const link = new URL("/", location.origin);
@@ -480,6 +494,7 @@ export default function App() {
     setProfileId(id);
     setProfileTab("Posts");
     go("profile");
+    history.replaceState(null, "", profileLink(id));
   }
   function message(id: string) {
     if (!me) {
@@ -571,7 +586,16 @@ export default function App() {
         go("seller");
         tell("Your listing has been saved.");
       } else if (modal === "settings") {
-        await api("profile", { ...b, avatar: preview, banner });
+        const pinnedPostIds = ["pin1", "pin2", "pin3"]
+          .map((field) => b[field])
+          .filter(Boolean);
+        await api("profile", {
+          ...b,
+          avatar: preview,
+          banner,
+          availableForWork: b.availableForWork === "on",
+          pinnedPostIds,
+        });
         setModal("");
         await refresh();
         tell("Profile updated.");
@@ -627,6 +651,13 @@ export default function App() {
     ? data.posts.find((p: Item) => p.id === selected.id)
     : null;
   const currentProfile = user(profileId);
+  const pinnedProjects = page === "profile"
+    ? ((currentProfile?.pinnedPostIds || []) as string[])
+        .flatMap((id) => posts.filter((post) => post.id === id))
+    : [];
+  const ownProjects = modal === "settings" && me
+    ? (data.posts as Item[]).filter((post) => post.userId === me.id)
+    : [];
   function empty(
     title: string,
     description: string,
@@ -1339,6 +1370,12 @@ export default function App() {
                     )}
                   </div>
                   <h1>{currentProfile.name}</h1>
+                  {currentProfile.availableForWork === true && (
+                    <span className="portfolio-availability">Available for work</span>
+                  )}
+                  {currentProfile.workHeadline && (
+                    <p className="portfolio-headline">{currentProfile.workHeadline}</p>
+                  )}
                   <p className="muted">
                     @{currentProfile.username} · {currentProfile.discipline}
                   </p>
@@ -1356,6 +1393,13 @@ export default function App() {
                       Visit website <ArrowUpRight size={14} />
                     </a>
                   )}
+                  <button
+                    type="button"
+                    className="text-button portfolio-share"
+                    onClick={() => copyProfileLink(profileId)}
+                  >
+                    Copy portfolio link <ArrowUpRight size={14} />
+                  </button>
                   <p className="profile-stats">
                     <strong>{currentProfile.followers}</strong> followers{" "}
                     <span>·</span>{" "}
@@ -1371,6 +1415,31 @@ export default function App() {
                     )}
                   </p>
                 </div>
+                {pinnedProjects.length > 0 && (
+                  <section className="portfolio-projects" aria-label="Pinned projects">
+                    <h2>Pinned projects</h2>
+                    <div className="portfolio-project-grid">
+                      {pinnedProjects.map((project) => (
+                        <button
+                          key={project.id}
+                          className="portfolio-project"
+                          onClick={() => open("post", project)}
+                        >
+                          {project.image &&
+                            !data.mediaTypes?.[project.image]?.startsWith("video/") && (
+                              <img
+                                src={previewImage(project.image)}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            )}
+                          <span>{project.title || "Untitled project"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
                 <div className="feed-tabs">
                   <div>
                     {["Posts", "Shop", "About"].map((t) => (
@@ -2247,6 +2316,48 @@ export default function App() {
                         placeholder="https://your-portfolio.com"
                       />
                     </label>
+                    <label>
+                      What you do
+                      <input
+                        name="workHeadline"
+                        defaultValue={me?.workHeadline}
+                        maxLength={120}
+                        placeholder="Motion designer for brands and digital products"
+                      />
+                    </label>
+                    <label>
+                      Availability
+                      <select
+                        name="availableForWork"
+                        defaultValue={me?.availableForWork ? "on" : "off"}
+                      >
+                        <option value="off">Hide availability</option>
+                        <option value="on">Available for work</option>
+                      </select>
+                    </label>
+                    <fieldset className="portfolio-pin-fields">
+                      <legend>Pinned projects</legend>
+                      {ownProjects.length ? (
+                        [0, 1, 2].map((slot) => (
+                          <label key={slot}>
+                            Project {slot + 1}
+                            <select
+                              name={`pin${slot + 1}`}
+                              defaultValue={me?.pinnedPostIds?.[slot] || ""}
+                            >
+                              <option value="">None</option>
+                              {ownProjects.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.title || "Untitled project"}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="fine-print">Post a project to pin it to your portfolio.</p>
+                      )}
+                    </fieldset>
                     {error && <div className="error-box">{error}</div>}
                     <button disabled={busy} className="button primary full">
                       Save profile <Check size={17} />
