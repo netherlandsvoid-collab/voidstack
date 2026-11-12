@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f0e8">
+  <meta name="description" content="Discover and collect exceptional artwork from Nigerian and African artists at ART WORLD.">
+  <title>ART WORLD — Where Art Meets the World</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="announcement">A home for African creativity. <a href="#artists">Meet the artists <span>↗</span></a></div>
+  <header class="site-header">
+    <a class="wordmark" href="#home" aria-label="ART WORLD home">ART<span>WORLD</span><i>®</i></a>
+    <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#explore">Explore art</a>
+      <a href="#artists">Artists</a>
+      <a href="#about">Our story</a>
+    </nav>
+    <a class="header-cta" href="#sell">Sell your art <span>↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero section-wrap" id="home">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-line"></span> THE AFRICAN ART EDIT</p>
+        <h1>Art that moves<br>you <em>moves</em> the world.</h1>
+        <p class="hero-description">A considered collection of art, stories, and perspectives from Nigeria and across Africa. Find the piece that feels like it was always meant for you.</p>
+        <div class="hero-actions">
+          <a class="button button-dark" href="#explore">Explore the collection <span>↗</span></a>
+          <a class="text-link" href="#sell">I'm an artist <span>→</span></a>
+        </div>
+        <div class="hero-note"><span class="note-star">✳</span><span>Independent artists.<br>Extraordinary perspectives.</span></div>
+      </div>
+      <div class="hero-art">
+        <div class="hero-image-frame">
+          <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=1100&q=85" alt="Expressive artwork displayed in an art gallery">
+          <span class="image-index">COLLECTION Nº 001</span>
+        </div>
+        <div class="floating-caption"><span class="caption-dot"></span><div><strong>Art is a way of seeing.</strong><small>Discover a different perspective</small></div><span class="caption-arrow">↗</span></div>
+        <div class="hero-side-label">MADE TO BE FELT — 06° 27' N</div>
+      </div>
+      <div class="hero-bottom"><span>01 / 04</span><span class="hero-bottom-line"></span><span>SCROLL TO DISCOVER ↓</span></div>
+    </section>
+
+    <section class="ticker" aria-label="Our philosophy"><div class="ticker-track"><span>ART IS EVERYWHERE</span><b>✳</b><span>STORIES WITHOUT BORDERS</span><b>✳</b><span>MADE IN AFRICA</span><b>✳</b><span>ART IS EVERYWHERE</span><b>✳</b><span>STORIES WITHOUT BORDERS</span><b>✳</b><span>MADE IN AFRICA</span><b>✳</b></div></section>
+
+    <section class="section-wrap collection-section" id="explore">
+      <div class="section-heading">
+        <div><p class="eyebrow">A WORLD OF EXPRESSION</p><h2>Find your kind<br>of <em>wonder.</em></h2></div>
+        <p class="section-intro">From bold contemporary paintings to quiet photographic moments, explore work that makes you pause, look closer, and feel something.</p>
+      </div>
+      <div class="category-grid">
+        <a class="category-card category-large" href="#artwork-grid" data-category-link="Paintings"><img src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?auto=format&fit=crop&w=1000&q=85" alt="Colourful abstract painting"><span class="category-number">01</span><div class="category-label"><span>Paintings</span><span>↗</span></div></a>
+        <a class="category-card" href="#artwork-grid" data-category-link="Photography"><img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=85" alt="Camera for photography"><span class="category-number">02</span><div class="category-label"><span>Photography</span><span>↗</span></div></a>
+        <a class="category-card" href="#artwork-grid" data-category-link="Sculpture"><img src="https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=800&q=85" alt="Sculptural art object"><span class="category-number">03</span><div class="category-label"><span>Sculpture</span><span>↗</span></div></a>
+        <a class="category-card category-wide" href="#artwork-grid" data-category-link="Digital art"><img src="https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=1000&q=85" alt="Contemporary abstract digital-style artwork"><span class="category-number">04</span><div class="category-label"><span>Digital art & beyond</span><span>↗</span></div></a>
+      </div>
+    </section>
+
+    <section class="featured-section" id="artwork">
+      <div class="section-wrap">
+        <div class="section-heading featured-heading"><div><p class="eyebrow">CURATED WITH FEELING</p><h2>Pieces worth<br><em>looking at.</em></h2></div><a class="text-link" href="#artwork-grid">Explore all artwork <span>↗</span></a></div>
+        <div class="filter-row" role="group" aria-label="Filter artwork">
+          <button class="filter-button active" data-filter="All">All works <span>06</span></button>
+          <button class="filter-button" data-filter="Paintings">Paintings</button>
+          <button class="filter-button" data-filter="Photography">Photography</button>
+          <button class="filter-button" data-filter="Sculpture">Sculpture</button>
+          <button class="filter-button" data-filter="Digital art">Digital art</button>
+        </div>
+        <div class="artwork-grid" id="artwork-grid">
+          <article class="art-card" data-category="Paintings"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&w=900&q=85" alt="Gallery painting in warm tones"><span class="art-badge">ORIGINAL</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>Quietly Becoming</h3><p>Amara Okafor · Lagos, NG</p></div><strong>₦185,000</strong></div></article>
+          <article class="art-card" data-category="Paintings"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1541961017774-22349e4a1262?auto=format&fit=crop&w=900&q=85" alt="Colourful abstract painting"><span class="art-badge">ORIGINAL</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>After the Rain</h3><p>Tunde Adebayo · Ibadan, NG</p></div><strong>₦240,000</strong></div></article>
+          <article class="art-card" data-category="Photography"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85" alt="Atmospheric landscape photograph"><span class="art-badge">PHOTOGRAPHY</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>Where Light Lands</h3><p>Nneka James · Accra, GH</p></div><strong>₦95,000</strong></div></article>
+          <article class="art-card" data-category="Sculpture"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=900&q=85" alt="Sculptural artwork"><span class="art-badge">SCULPTURE</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>Soft Monument</h3><p>Chidi Nwosu · Enugu, NG</p></div><strong>₦320,000</strong></div></article>
+          <article class="art-card" data-category="Digital art"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=900&q=85" alt="Abstract contemporary artwork"><span class="art-badge">DIGITAL ART</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>Future Ancestry</h3><p>Zara Bello · Abuja, NG</p></div><strong>₦75,000</strong></div></article>
+          <article class="art-card" data-category="Paintings"><a href="#sell" class="art-image"><img src="https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=900&q=85" alt="Expressive framed painting"><span class="art-badge">ORIGINAL</span><span class="art-view">View piece ↗</span></a><div class="art-info"><div><h3>The Things We Carry</h3><p>Fola Adeyemi · Lagos, NG</p></div><strong>₦210,000</strong></div></article>
+        </div>
+        <p class="demo-note">Preview collection — sample listings and prices for demonstration.</p>
+      </div>
+    </section>
+
+    <section class="artist-section section-wrap" id="artists">
+      <div class="artist-top"><div><p class="eyebrow">THE PEOPLE BEHIND THE PIECES</p><h2>Meet the minds<br>making <em>meaning.</em></h2></div><p>Every work has a world behind it. Get to know the artists shaping conversations, challenging perspectives, and creating what comes next.</p></div>
+      <div class="artist-grid">
+        <article class="artist-card"><div class="artist-photo"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=85" alt="Portrait representing artist Amara Okafor"><span>01 / VISUAL ARTIST</span></div><div class="artist-details"><div><h3>Amara Okafor</h3><p>Lagos, Nigeria</p></div><a href="#sell" aria-label="Explore Amara Okafor's art">↗</a></div></article>
+        <article class="artist-card"><div class="artist-photo"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=85" alt="Portrait representing artist Tunde Adebayo"><span>02 / PAINTER</span></div><div class="artist-details"><div><h3>Tunde Adebayo</h3><p>Ibadan, Nigeria</p></div><a href="#sell" aria-label="Explore Tunde Adebayo's art">↗</a></div></article>
+        <article class="artist-card"><div class="artist-photo"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=700&q=85" alt="Portrait representing artist Zara Bello"><span>03 / DIGITAL ARTIST</span></div><div class="artist-details"><div><h3>Zara Bello</h3><p>Abuja, Nigeria</p></div><a href="#sell" aria-label="Explore Zara Bello's art">↗</a></div></article>
+      </div>
+      <div class="artist-foot"><span>CREATIVITY HAS NO SINGLE ADDRESS.</span><a class="text-link" href="#sell">Discover the community <span>↗</span></a></div>
+    </section>
+
+    <section class="sell-section" id="sell">
+      <div class="sell-visual"><img src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1200&q=85" alt="Artist's colourful workspace"><span class="sell-stamp">YOUR<br>ART.<br>YOUR<br>WORLD.</span></div>
+      <div class="sell-copy"><p class="eyebrow">A SPACE FOR YOUR WORK</p><h2>Your art deserves<br>to be <em>out there.</em></h2><p>Make room for new eyes, new stories, and new opportunities. ART WORLD helps artists present their work to people who value the thought and craft behind it.</p><ul class="sell-benefits"><li><span>01</span> Create your artist profile</li><li><span>02</span> Showcase your original work</li><li><span>03</span> Connect with potential buyers</li></ul><button class="button button-light" id="open-submit">Start your artist journey <span>↗</span></button><small class="sell-disclaimer">Artist submissions are a demo in this version and are not sent to a server.</small></div>
+    </section>
+
+    <section class="about-section section-wrap" id="about"><p class="eyebrow">WHY ART WORLD</p><div class="about-content"><h2>Art is more than<br>what we <em>see.</em></h2><div><p>It is memory. Identity. A question without an easy answer. ART WORLD is a Nigerian art platform built to bring exceptional African creativity closer to the people who want to live with it.</p><p>We believe artists deserve visibility, collectors deserve discovery, and every perspective deserves a place in the conversation.</p><a class="text-link" href="#artists">A little more about our world <span>↗</span></a></div></div><div class="about-bottom"><span>ROOTED HERE.</span><span>OPEN TO THE WORLD.</span><span>ALWAYS IN PROGRESS. ✳</span></div></section>
+
+    <section class="newsletter section-wrap"><div><p class="eyebrow">LET ART FIND YOU</p><h2>A little inspiration<br>in your <em>inbox.</em></h2></div><form id="newsletter-form"><label for="newsletter-email">Occasional art stories, new artists, and pieces worth knowing.</label><div class="newsletter-input"><input type="email" id="newsletter-email" placeholder="Your email address" required><button type="submit" aria-label="Subscribe">↗</button></div><p class="form-message" id="newsletter-message" aria-live="polite"></p></form></section>
+  </main>
+
+  <footer class="site-footer"><div class="footer-main"><div><a class="wordmark footer-wordmark" href="#home">ART<span>WORLD</span><i>®</i></a><p>Where art meets the world.<br>Rooted in Africa. Open to everyone.</p></div><div class="footer-links"><div><span>DISCOVER</span><a href="#explore">Explore art</a><a href="#artists">Artists</a><a href="#sell">Sell your art</a></div><div><span>THE WORLD</span><a href="#about">Our story</a><a href="mailto:info@artworld.com.ng">Contact us</a><a href="#home">Instagram ↗</a></div></div></div><div class="footer-bottom"><span>© 2026 ART WORLD. ALL RIGHTS RESERVED.</span><span>MADE WITH FEELING IN NIGERIA ✳</span></div></footer>
+
+  <dialog id="artist-dialog" class="artist-dialog">
+    <form method="dialog"><button class="dialog-close" aria-label="Close form">×</button></form>
+    <p class="eyebrow">LET'S MAKE SPACE FOR YOUR WORK</p><h2>Start your<br><em>artist journey.</em></h2>
+    <p class="dialog-intro">Tell us a little about yourself. This demo form shows how artist onboarding could begin.</p>
+    <form id="artist-form" class="artist-form">
+      <label for="artist-name">Your name</label><input id="artist-name" name="name" required placeholder="e.g. Amara Okafor">
+      <label for="artist-email">Email address</label><input id="artist-email" name="email" type="email" required placeholder="you@example.com">
+      <label for="artist-medium">What do you create?</label><select id="artist-medium" name="medium" required><option value="">Choose your medium</option><option>Paintings</option><option>Sculpture</option><option>Photography</option><option>Digital art</option><option>Mixed media</option><option>Other</option></select>
+      <label for="artist-message">Tell us about your work</label><textarea id="artist-message" name="message" rows="3" placeholder="A few words about your practice..."></textarea>
+      <button class="button button-dark" type="submit">Preview submission <span>↗</span></button>
+      <p id="artist-message-status" class="form-message" aria-live="polite"></p>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>
